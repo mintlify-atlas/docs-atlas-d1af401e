@@ -1,0 +1,353 @@
+---
+title: 'JavaScript vs TypeScript'
+description: 'Choose between JavaScript and TypeScript for your Devark project'
+icon: 'code'
+---
+
+## Overview
+
+Devark supports both JavaScript and TypeScript for all modules. When you add a module to your project, Devark prompts you to choose your preferred language and generates the appropriate files with correct dependencies.
+
+## When to Choose JavaScript
+
+<Accordion title="Best for rapid prototyping">
+  JavaScript is ideal when you want to move quickly without type annotations. Perfect for:
+  - Small projects or MVPs
+  - Simple APIs without complex data structures
+  - Teams without TypeScript experience
+  - Projects where build speed is critical
+</Accordion>
+
+<Accordion title="Less configuration overhead">
+  JavaScript projects require:
+  - No `tsconfig.json` configuration
+  - No TypeScript compiler setup
+  - Fewer development dependencies
+  - No type definition packages (`@types/*`)
+</Accordion>
+
+## When to Choose TypeScript
+
+<Accordion title="Type safety and better IDE support">
+  TypeScript provides compile-time type checking and enhanced IntelliSense:
+  - Catch errors before runtime
+  - Better autocompletion in editors
+  - Refactoring with confidence
+  - Self-documenting code through types
+</Accordion>
+
+<Accordion title="Better for large-scale applications">
+  TypeScript excels in:
+  - Projects with multiple developers
+  - Complex business logic
+  - Long-term maintenance
+  - Integration with typed libraries
+</Accordion>
+
+## How Language Selection Works
+
+When you install any Devark module, you'll see this prompt:
+
+```bash
+? Which version do you want to add for this module?
+  > JavaScript
+    TypeScript
+```
+
+Devark then:
+
+1. **Detects or prompts for entry file**
+   - JavaScript: `app.js` (root directory)
+   - TypeScript: `src/app.ts` (inside `src/` folder)
+
+2. **Installs language-specific dependencies**
+   - JavaScript: Only runtime dependencies
+   - TypeScript: Adds `typescript`, `ts-node`, and `@types/*` packages
+
+3. **Generates files with correct extensions**
+   - JavaScript: `.js` files in root directory
+   - TypeScript: `.ts` files in `src/` directory
+
+<Note>
+Devark auto-detects TypeScript entry files by searching for `.ts` files in the `src/` directory if your specified entry file isn't found.
+</Note>
+
+## File Structure Differences
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```
+    my-project/
+    ├── app.js                    # Entry point
+    ├── config/
+    │   └── googleStrategy.js
+    ├── routes/
+    │   └── googleAuthRoutes.js
+    ├── controllers/
+    │   └── otp.js
+    ├── middleware/
+    │   └── ratelimit.js
+    ├── .env
+    ├── .gitignore
+    └── package.json
+    ```
+    
+    All generated files live in the **root directory** alongside your entry file.
+  </Tab>
+  
+  <Tab title="TypeScript">
+    ```
+    my-project/
+    ├── src/
+    │   ├── app.ts                # Entry point
+    │   ├── config/
+    │   │   └── googleStrategy.ts
+    │   ├── routes/
+    │   │   └── googleAuthRoutes.ts
+    │   ├── controllers/
+    │   │   └── otp.ts
+    │   └── middleware/
+    │       └── ratelimit.ts
+    ├── .env
+    ├── .gitignore
+    ├── tsconfig.json             # TypeScript config
+    └── package.json
+    ```
+    
+    All generated files live in the **`src/` directory** for better organization.
+  </Tab>
+</Tabs>
+
+## Code Generation Examples
+
+Devark generates language-appropriate code for each module. Here's how the same Google OAuth strategy looks in both languages:
+
+<CodeGroup>
+```javascript JavaScript - googleStrategy.js
+import passport from 'passport'
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
+
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: '/auth/google/callback',
+}, (accessToken, refreshToken, profile, done) => {
+  // Replace this with DB logic
+  return done(null, profile)
+}))
+
+passport.serializeUser((user, done) => {
+  done(null, user)
+})
+
+passport.deserializeUser((user, done) => {
+  done(null, user)
+})
+```
+
+```typescript TypeScript - googleStrategy.ts
+import passport from "passport";
+import { Strategy as GoogleStrategy, Profile as GoogleProfile } from "passport-google-oauth20";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+export interface IUser {
+  id: string;
+  displayName: string;
+  emails?: { value: string }[];
+  photos?: { value: string }[];
+}
+
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/auth/google/callback",
+    },
+    async (
+      accessToken: string,
+      refreshToken: string,
+      profile: GoogleProfile,
+      done: (err: any, user?: Express.User) => void
+    ) => {
+      try {
+        const user: IUser = {
+          id: profile.id,
+          displayName: profile.displayName,
+          emails: profile.emails,
+          photos: profile.photos,
+        };
+        return done(null, user);
+      } catch (err) {
+        return done(err as Error);
+      }
+    }
+  )
+);
+
+passport.serializeUser((user: Express.User, done) => {
+  done(null, user);
+});
+
+passport.deserializeUser((user: Express.User, done) => {
+  done(null, user);
+});
+```
+</CodeGroup>
+
+<Tip>
+Notice how TypeScript version includes:
+- Type annotations for all parameters
+- Interface definitions (`IUser`)
+- Explicit return types
+- Non-null assertions (`!`) for environment variables
+</Tip>
+
+## Dependency Differences
+
+Devark automatically installs the correct dependencies based on your language choice:
+
+<Tabs>
+  <Tab title="JavaScript">
+    **Runtime dependencies only:**
+    ```json
+    {
+      "dependencies": {
+        "express": "^4.18.0",
+        "passport": "^0.6.0",
+        "passport-google-oauth20": "^2.0.0",
+        "express-session": "^1.17.0",
+        "dotenv": "^16.0.0"
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="TypeScript">
+    **Runtime + development + type definitions:**
+    ```json
+    {
+      "dependencies": {
+        "express": "^4.18.0",
+        "passport": "^0.6.0",
+        "passport-google-oauth20": "^2.0.0",
+        "express-session": "^1.17.0",
+        "dotenv": "^16.0.0"
+      },
+      "devDependencies": {
+        "typescript": "^5.0.0",
+        "ts-node": "^10.9.0",
+        "@types/node": "^20.0.0",
+        "@types/express": "^4.17.0",
+        "@types/express-session": "^1.17.0",
+        "@types/passport": "^1.0.0",
+        "@types/passport-google-oauth20": "^2.0.0"
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Migration Guide
+
+### Starting with JavaScript
+
+If you're unsure which to choose, **start with JavaScript**:
+
+1. Install modules with JavaScript option
+2. Build your features quickly
+3. Migrate to TypeScript later if needed
+
+### Migrating to TypeScript
+
+When you're ready to adopt TypeScript:
+
+<Steps>
+  <Step title="Install TypeScript dependencies">
+    ```bash
+    npm install --save-dev typescript ts-node @types/node @types/express
+    ```
+  </Step>
+  
+  <Step title="Create tsconfig.json">
+    ```json
+    {
+      "compilerOptions": {
+        "target": "ES2020",
+        "module": "commonjs",
+        "lib": ["ES2020"],
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
+      },
+      "include": ["src/**/*"],
+      "exclude": ["node_modules"]
+    }
+    ```
+  </Step>
+  
+  <Step title="Create src/ directory">
+    ```bash
+    mkdir src
+    ```
+  </Step>
+  
+  <Step title="Rename files incrementally">
+    Start with your entry file:
+    ```bash
+    mv app.js src/app.ts
+    ```
+    
+    Then gradually rename other files:
+    ```bash
+    mv routes/googleAuthRoutes.js src/routes/googleAuthRoutes.ts
+    mv config/googleStrategy.js src/config/googleStrategy.ts
+    ```
+  </Step>
+  
+  <Step title="Add type annotations">
+    Update files with TypeScript syntax as you encounter type errors.
+  </Step>
+  
+  <Step title="Re-install modules in TypeScript">
+    For any new modules, choose TypeScript when prompted by Devark.
+  </Step>
+</Steps>
+
+<Note>
+You can run JavaScript and TypeScript side-by-side during migration. TypeScript can import JavaScript files without issues.
+</Note>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="JavaScript Projects" icon="js">
+    - Keep files organized in folders (routes, controllers, config)
+    - Use JSDoc comments for basic type hints
+    - Leverage ES6+ features
+    - Consider migrating to TS as project grows
+  </Card>
+  
+  <Card title="TypeScript Projects" icon="typescript">
+    - Enable strict mode in tsconfig.json
+    - Define interfaces for API responses
+    - Use enums for constants
+    - Leverage utility types (Partial, Pick, Omit)
+  </Card>
+</CardGroup>
+
+## Source Code Reference
+
+Devark's language selection logic is implemented in:
+- `src/modules/*/install.js` - Module installation with language prompts (lines 36-47)
+- `src/utils/packageManager.js` - Dependency installation logic
+- Template files in `templates/javascript/` and `templates/typescript/` directories
+
+<Tip>
+Devark maintains separate template directories for JavaScript and TypeScript versions of every module, ensuring you always get properly typed code.
+</Tip>

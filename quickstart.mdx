@@ -1,80 +1,429 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Add Google OAuth to your Node.js project in 5 minutes
 ---
 
-## Get started in three steps
+# Quickstart Guide
 
-Get your documentation site running locally and make your first customization.
+This guide walks you through adding Google OAuth authentication to an existing Node.js project using Devark. You'll go from zero to a working OAuth flow in about 5 minutes.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+Before starting, make sure you have:
 
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+- Node.js 18+ installed
+- An existing Node.js project with `package.json`
+- An Express.js app (or similar entry file like `app.js`)
+- Devark installed (see [Installation](/installation))
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Don't have a project yet? Create one quickly:
+  ```bash
+  mkdir my-backend && cd my-backend
+  npm init -y
+  npm install express
+  touch app.js
+  ```
 </Note>
+
+## Step-by-Step Tutorial
+
+<Steps>
+
+<Step title="Navigate to your project">
+  Open your terminal and navigate to your Node.js project directory:
+
+  ```bash
+  cd /path/to/your/project
+  ```
+
+  Verify you have a `package.json` file:
+
+  ```bash
+  ls package.json
+  ```
+</Step>
+
+<Step title="Run the Devark command">
+  Execute the command to add Google OAuth:
+
+  ```bash
+  devark add google-oauth
+  ```
+
+  You'll see the Devark logo and initialization message:
+
+  ```
+  ┌  Google OAuth Module Setup
+  │
+  ○  Installing Google OAuth module...
+  │  ✓ pnpm detected
+  ```
+</Step>
+
+<Step title="Choose JavaScript or TypeScript">
+  Devark will ask which language you want to use:
+
+  ```
+  ◆  Which version do you want to add for this module?
+  │  ● JavaScript
+  │  ○ TypeScript
+  ```
+
+  Use arrow keys to select and press Enter. For this guide, we'll choose **JavaScript**.
+</Step>
+
+<Step title="Specify your entry file">
+  Enter the path to your main application file:
+
+  ```
+  ◆  Enter your project entry file (relative to root):
+  │  app.js
+  ```
+
+  Press Enter to use the default (`app.js`) or type your custom path (e.g., `src/index.js`).
+</Step>
+
+<Step title="Provide Google OAuth credentials">
+  Devark will prompt for your Google OAuth credentials. You can skip these for now and add them later:
+
+  ```
+  ◆  Enter your Google Client ID (leave empty for sample):
+  │  
+  └  Press Enter to skip
+
+  ◆  Enter your Google Client Secret (leave empty for sample):
+  │  
+  └  Press Enter to skip
+
+  ◆  Enter your Google Callback URL:
+  │  http://localhost:3000/auth/google/callback
+  └  Press Enter to use default
+
+  ◆  Enter your session secret (leave empty for sample):
+  │  
+  └  Press Enter to skip
+  ```
+
+  <Tip>
+    Don't have credentials yet? No problem! Devark will use placeholder values. You can get real credentials from the [Google Cloud Console](https://console.cloud.google.com/) later.
+  </Tip>
+</Step>
+
+<Step title="Wait for installation">
+  Devark will now install dependencies and generate code:
+
+  ```
+  ◒  Installing dependencies...
+  ```
+
+  This installs:
+  - `express`
+  - `passport`
+  - `passport-google-oauth20`
+  - `express-session`
+  - `dotenv`
+
+  Output:
+  ```
+  ✓  Dependencies installed successfully.
+  ✓  .env created with sample values.
+  │
+  └  Google OAuth setup complete!
+  ```
+</Step>
+
+<Step title="Review generated files">
+  Devark has created several files in your project:
+
+  ```
+  your-project/
+  ├── app.js                    # ← Modified with OAuth setup
+  ├── .env                      # ← Created with credentials
+  ├── config/
+  │   └── googleStrategy.js     # ← Passport Google strategy
+  └── routes/
+      └── googleAuthRoutes.js   # ← OAuth routes
+  ```
+
+  Let's examine what was added:
+
+  **app.js** - Updated with middleware and route registration:
+  ```javascript
+  const passport = require('passport');
+  const session = require('express-session');
+  require('dotenv').config();
+  require('./config/googleStrategy');
+
+  app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false
+  }));
+
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  const googleAuthRoutes = require('./routes/googleAuthRoutes');
+  app.use('/', googleAuthRoutes);
+  ```
+
+  **.env** - Environment variables for configuration:
+  ```bash
+  GOOGLE_CLIENT_ID=your-client-id
+  GOOGLE_CLIENT_SECRET=your-client-secret
+  GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+  SESSION_SECRET=your-session-secret
+  ```
+</Step>
+
+<Step title="Configure Google OAuth credentials">
+  To make OAuth work, you need real credentials from Google Cloud:
+
+  1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+  2. Create a new project or select existing one
+  3. Navigate to **APIs & Services → Credentials**
+  4. Click **Create Credentials → OAuth 2.0 Client ID**
+  5. Configure the consent screen if prompted
+  6. Select **Web application** as application type
+  7. Add authorized redirect URI:
+     ```
+     http://localhost:3000/auth/google/callback
+     ```
+  8. Copy the **Client ID** and **Client Secret**
+
+  Update your `.env` file with the real credentials:
+
+  ```bash
+  GOOGLE_CLIENT_ID=1234567890-abc123def456.apps.googleusercontent.com
+  GOOGLE_CLIENT_SECRET=GOCSPX-aBcDeFgHiJkLmNoPqRsTuVwXyZ
+  GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+  SESSION_SECRET=your-secure-random-string
+  ```
+
+  <Warning>
+    Never commit your `.env` file to version control. Add it to `.gitignore`:
+    ```bash
+    echo ".env" >> .gitignore
+    ```
+  </Warning>
+</Step>
+
+<Step title="Start your application">
+  Run your Express.js application:
+
+  ```bash
+  node app.js
+  ```
+
+  If you have a start script in `package.json`:
+
+  ```bash
+  npm start
+  ```
+
+  You should see:
+  ```
+  Server listening on port 3000
+  ```
+</Step>
+
+<Step title="Test the OAuth flow">
+  Open your browser and navigate to:
+
+  ```
+  http://localhost:3000/auth/google
+  ```
+
+  You should be redirected to Google's login page. After signing in, Google will redirect you back to your callback URL.
+
+  The generated routes provide these endpoints:
+
+  - **GET /auth/google** - Initiates OAuth flow
+  - **GET /auth/google/callback** - Handles OAuth callback
+  - **GET /auth/logout** - Logs out the user
+  - **GET /auth/profile** - Returns user profile (if authenticated)
+
+  Test the profile endpoint after logging in:
+
+  ```bash
+  curl http://localhost:3000/auth/profile
+  ```
+
+  Expected response:
+  ```json
+  {
+    "id": "1234567890",
+    "displayName": "John Doe",
+    "emails": [{ "value": "john@example.com" }]
+  }
+  ```
+</Step>
+
+</Steps>
+
+## Understanding the Generated Code
+
+### Passport Strategy (`config/googleStrategy.js`)
+
+This file configures Passport.js with the Google OAuth strategy:
+
+```javascript
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    // Here you can save user to database
+    return cb(null, profile);
+  }
+));
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
+```
+
+### Auth Routes (`routes/googleAuthRoutes.js`)
+
+Provides ready-to-use OAuth endpoints:
+
+```javascript
+const express = require('express');
+const passport = require('passport');
+const router = express.Router();
+
+// Initiate Google OAuth
+router.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+// OAuth callback
+router.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  (req, res) => res.redirect('/')
+);
+
+// Logout
+router.get('/auth/logout', (req, res) => {
+  req.logout(() => res.redirect('/'));
+});
+
+module.exports = router;
+```
+
+## Customizing the Integration
+
+The generated code is fully editable. Common customizations:
+
+### Save users to database
+
+Modify `config/googleStrategy.js`:
+
+```javascript
+function(accessToken, refreshToken, profile, cb) {
+  User.findOrCreate({ googleId: profile.id }, (err, user) => {
+    return cb(err, user);
+  });
+}
+```
+
+### Add authentication middleware
+
+Create middleware to protect routes:
+
+```javascript
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.redirect('/login');
+}
+
+router.get('/dashboard', ensureAuthenticated, (req, res) => {
+  res.render('dashboard', { user: req.user });
+});
+```
+
+### Customize redirect URLs
+
+Edit the callback route in `routes/googleAuthRoutes.js`:
+
+```javascript
+router.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  (req, res) => {
+    // Redirect to dashboard instead of home
+    res.redirect('/dashboard');
+  }
+);
+```
+
+## Troubleshooting
+
+### "Redirect URI mismatch" error
+
+Ensure the callback URL in Google Cloud Console exactly matches your `.env` file:
+
+```
+http://localhost:3000/auth/google/callback
+```
+
+No trailing slashes, correct port number.
+
+### "Invalid client" error
+
+Double-check your `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`. Make sure there are no extra spaces.
+
+### Session not persisting
+
+Ensure `express-session` is configured before `passport.initialize()`:
+
+```javascript
+app.use(session({ ... }));  // Must come first
+app.use(passport.initialize());
+app.use(passport.session());
+```
+
+## Next Steps
+
+Congratulations! You've successfully added Google OAuth to your project. Here are some ideas for next steps:
+
+<CardGroup cols={2}>
+  <Card title="Add GitHub OAuth" icon="github">
+    ```bash
+    devark add github-oauth
+    ```
+  </Card>
+  <Card title="Add Email OTP" icon="envelope">
+    ```bash
+    devark add resend-otp
+    ```
+  </Card>
+  <Card title="Create New Project" icon="folder">
+    ```bash
+    devark add node-mongo
+    ```
+  </Card>
+  <Card title="Explore TypeScript" icon="code">
+    Run any module with TypeScript support
+  </Card>
+</CardGroup>
+
+## Available Modules
+
+Explore all available Devark modules:
+
+- `devark add google-oauth` - Google OAuth 2.0
+- `devark add github-oauth` - GitHub OAuth
+- `devark add resend-otp` - Email OTP via Resend
+- `devark add node-mongo` - Node.js + MongoDB template
+- `devark add node-postgres` - Node.js + PostgreSQL template
+- `devark add oauth` - Interactive OAuth provider selector
+
+<Tip>
+  Each module supports both JavaScript and TypeScript. You'll be prompted to choose during installation.
+</Tip>

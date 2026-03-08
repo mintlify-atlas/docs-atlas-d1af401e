@@ -1,0 +1,454 @@
+---
+title: 'GitHub OAuth Module'
+description: 'Add GitHub OAuth authentication to your Node.js project with automatic setup and configuration'
+icon: 'github'
+---
+
+## Overview
+
+The GitHub OAuth module integrates GitHub authentication into your existing Node.js Express application using Passport.js. The module automatically:
+
+- Installs all required dependencies
+- Generates configuration and route files
+- Patches your main app file intelligently
+- Injects environment variables to `.env`
+- Supports both JavaScript and TypeScript
+
+## Installation
+
+Run the following command in your project directory:
+
+```bash
+npx devark add github-oauth
+```
+
+## Interactive Setup
+
+The CLI will guide you through an interactive setup process with the following prompts:
+
+<Steps>
+  <Step title="Select Language">
+    Choose between JavaScript or TypeScript implementation
+    
+    ```
+    ? Which version do you want to add for this module?
+    › JavaScript
+      TypeScript
+    ```
+  </Step>
+
+  <Step title="Specify Entry File">
+    Enter your project's main entry file (relative to root)
+    
+    ```
+    ? Enter your project entry file (relative to root):
+    › app.js (for JavaScript)
+    › src/app.ts (for TypeScript)
+    ```
+    
+    <Note>
+      For TypeScript projects, if the file doesn't exist, Devark will auto-detect `.ts` files in your `src/` directory.
+    </Note>
+  </Step>
+
+  <Step title="GitHub Client ID">
+    Enter your GitHub OAuth Client ID (or leave empty for sample values)
+    
+    ```
+    ? Enter your GitHub Client ID (leave empty for sample):
+    › your-client-id
+    ```
+  </Step>
+
+  <Step title="GitHub Client Secret">
+    Enter your GitHub OAuth Client Secret (or leave empty for sample values)
+    
+    ```
+    ? Enter your GitHub Client Secret (leave empty for sample):
+    › your-client-secret
+    ```
+  </Step>
+
+  <Step title="Callback URL">
+    Enter your OAuth callback URL
+    
+    ```
+    ? Enter your GitHub Callback URL:
+    › http://localhost:3000/auth/github/callback
+    ```
+  </Step>
+
+  <Step title="Session Secret">
+    Enter a secret key for session management
+    
+    ```
+    ? Enter your session secret (leave empty for sample):
+    › your-session-secret
+    ```
+  </Step>
+</Steps>
+
+## Dependencies Installed
+
+The module automatically installs the following packages:
+
+### Runtime Dependencies
+```bash
+express
+passport
+passport-github2
+express-session
+dotenv
+```
+
+### TypeScript Dev Dependencies (TypeScript only)
+```bash
+typescript
+ts-node
+@types/node
+@types/express
+@types/express-session
+@types/passport
+@types/passport-github2
+```
+
+## Generated File Structure
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```
+    your-project/
+    ├── config/
+    │   └── githubStrategy.js    # Passport strategy configuration
+    ├── routes/
+    │   └── githubAuthRoutes.js  # OAuth routes
+    ├── app.js                    # Patched with OAuth setup
+    └── .env                      # Environment variables
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```
+    your-project/
+    ├── src/
+    │   ├── config/
+    │   │   └── githubStrategy.ts    # Passport strategy configuration
+    │   ├── routes/
+    │   │   └── githubAuthRoutes.ts  # OAuth routes
+    │   └── app.ts                    # Patched with OAuth setup
+    └── .env                          # Environment variables
+    ```
+  </Tab>
+</Tabs>
+
+## Configuration
+
+The following environment variables are automatically added to your `.env` file:
+
+<ParamField path="GITHUB_CLIENT_ID" type="string" required>
+  Your GitHub OAuth App Client ID from GitHub Developer Settings
+</ParamField>
+
+<ParamField path="GITHUB_CLIENT_SECRET" type="string" required>
+  Your GitHub OAuth App Client Secret from GitHub Developer Settings
+</ParamField>
+
+<ParamField path="GITHUB_CALLBACK_URL" type="string" default="http://localhost:3000/auth/github/callback">
+  The callback URL where GitHub redirects after authentication
+</ParamField>
+
+<ParamField path="SESSION_SECRET" type="string" required>
+  Secret key used to sign the session ID cookie
+</ParamField>
+
+### Example .env
+```bash
+GITHUB_CLIENT_ID=your-client-id
+GITHUB_CLIENT_SECRET=your-client-secret
+GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
+SESSION_SECRET=your-session-secret
+```
+
+## Generated Code
+
+### Strategy Configuration
+
+<Tabs>
+  <Tab title="JavaScript">
+    The module generates `config/githubStrategy.js`:
+    
+    ```javascript
+    import passport from "passport";
+    import { Strategy as GitHubStrategy } from "passport-github2";
+    import dotenv from "dotenv";
+
+    dotenv.config();
+
+    passport.use(
+      new GitHubStrategy(
+        {
+          clientID: process.env.GITHUB_CLIENT_ID,
+          clientSecret: process.env.GITHUB_CLIENT_SECRET,
+          callbackURL: process.env.GITHUB_CALLBACK_URL,
+        },
+        (accessToken, refreshToken, profile, done) => {
+          return done(null, profile);
+        }
+      )
+    );
+
+    passport.serializeUser((user, done) => {
+      done(null, user);
+    });
+
+    passport.deserializeUser((obj, done) => {
+      done(null, obj);
+    });
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    The module generates `src/config/githubStrategy.ts`:
+    
+    ```typescript
+    import passport from "passport";
+    import { Strategy as GitHubStrategy, Profile } from "passport-github2";
+    import dotenv from "dotenv";
+
+    dotenv.config();
+
+    passport.use(
+      new GitHubStrategy(
+        {
+          clientID: process.env.GITHUB_CLIENT_ID as string,
+          clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+          callbackURL: process.env.GITHUB_CALLBACK_URL as string,
+        },
+        (
+          accessToken: string,
+          refreshToken: string,
+          profile: Profile,
+          done: (error: any, user?: any) => void
+        ) => {
+          return done(null, profile);
+        }
+      )
+    );
+
+    passport.serializeUser((user: Express.User, done) => {
+      done(null, user);
+    });
+
+    passport.deserializeUser((obj: Express.User, done) => {
+      done(null, obj);
+    });
+
+    export default passport;
+    ```
+  </Tab>
+</Tabs>
+
+### Authentication Routes
+
+<Tabs>
+  <Tab title="JavaScript">
+    The module generates `routes/githubAuthRoutes.js`:
+    
+    ```javascript
+    import express from "express";
+    import passport from "passport";
+    import "../config/githubStrategy.js";
+
+    const router = express.Router();
+
+    router.get("/auth/github", passport.authenticate("github", { scope: ["user:email"] }));
+
+    router.get(
+      "/auth/github/callback",
+      passport.authenticate("github", { failureRedirect: "/" }),
+      (req, res) => {
+        res.redirect("/auth/github/success");
+      }
+    );
+
+    router.get("/auth/github/success", (req, res) => {
+      res.send('✅ Logged in successfully!')
+    });
+
+    export default router;
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    Similar structure with TypeScript types for request and response objects.
+  </Tab>
+</Tabs>
+
+## Usage Example
+
+After installation, your app will automatically have GitHub OAuth configured. To test:
+
+<Steps>
+  <Step title="Start Your Server">
+    ```bash
+    npm start
+    ```
+  </Step>
+
+  <Step title="Navigate to Login">
+    Open your browser and visit:
+    ```
+    http://localhost:3000/auth/github
+    ```
+  </Step>
+
+  <Step title="Authenticate">
+    You'll be redirected to GitHub's login page. After successful authentication, you'll be redirected back to `/auth/github/success`.
+  </Step>
+</Steps>
+
+### Available Routes
+
+- `GET /auth/github` - Initiates GitHub OAuth flow (requests `user:email` scope)
+- `GET /auth/github/callback` - Handles GitHub's redirect after authentication
+- `GET /auth/github/success` - Success page after authentication
+
+## App.js Patching
+
+The module intelligently patches your main app file to include:
+
+1. **Required imports** for passport and session management
+2. **Session middleware** configuration (placed before passport initialization)
+3. **Passport initialization** middleware
+4. **Route registration** for GitHub OAuth routes
+
+<Note>
+  The patching logic ensures no duplicate imports or middleware declarations. It detects existing setup and only adds what's missing.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Error: Entry file not found">
+    **Solution:** Ensure your `app.js` or `src/app.ts` file exists before running the module installation. Create the file if it doesn't exist:
+    
+    ```bash
+    touch app.js  # for JavaScript
+    mkdir -p src && touch src/app.ts  # for TypeScript
+    ```
+  </Accordion>
+
+  <Accordion title="Error: Redirect URI mismatch">
+    **Solution:** Ensure the callback URL in your GitHub OAuth App settings matches the `GITHUB_CALLBACK_URL` in your `.env` file.
+    
+    1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+    2. Select your OAuth App
+    3. Update the Authorization callback URL to match your `.env` value
+    4. Typically: `http://localhost:3000/auth/github/callback`
+  </Accordion>
+
+  <Accordion title="Session is not persisting">
+    **Solution:** Ensure you have a strong `SESSION_SECRET` in your `.env` file and that `express-session` is configured before passport initialization.
+    
+    The module handles this automatically, but if you're manually configuring, ensure this order:
+    ```javascript
+    app.use(session({ secret: process.env.SESSION_SECRET }))
+    app.use(passport.initialize())
+    app.use(passport.session())
+    ```
+  </Accordion>
+
+  <Accordion title="TypeScript errors after installation">
+    **Solution:** The module installs TypeScript types automatically. If you still see errors:
+    
+    ```bash
+    npm install --save-dev @types/express @types/passport @types/passport-github2
+    ```
+  </Accordion>
+
+  <Accordion title="Cannot find module errors">
+    **Solution:** If dependencies weren't installed properly, manually install them:
+    
+    ```bash
+    npm install express passport passport-github2 express-session dotenv
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Getting GitHub OAuth Credentials
+
+<Steps>
+  <Step title="Navigate to Developer Settings">
+    Visit [GitHub Developer Settings](https://github.com/settings/developers) and sign in to your GitHub account.
+  </Step>
+
+  <Step title="Create New OAuth App">
+    Click **OAuth Apps** → **New OAuth App**
+  </Step>
+
+  <Step title="Fill Application Details">
+    - **Application name**: Your app name
+    - **Homepage URL**: `http://localhost:3000`
+    - **Authorization callback URL**: `http://localhost:3000/auth/github/callback`
+  </Step>
+
+  <Step title="Generate Client Secret">
+    After creating the app, click **Generate a new client secret**
+  </Step>
+
+  <Step title="Copy Credentials">
+    Copy the Client ID and Client Secret and add them to your `.env` file.
+    
+    <Warning>
+      Save your client secret immediately - GitHub will only show it once!
+    </Warning>
+  </Step>
+</Steps>
+
+## Customizing User Data
+
+By default, the strategy returns the entire GitHub profile. To customize what user data you store:
+
+```javascript
+passport.use(
+  new GitHubStrategy(
+    { /* ... */ },
+    async (accessToken, refreshToken, profile, done) => {
+      // Custom logic to store user in database
+      const user = await User.findOrCreate({
+        githubId: profile.id,
+        username: profile.username,
+        email: profile.emails[0].value,
+        avatar: profile.photos[0].value
+      });
+      return done(null, user);
+    }
+  )
+);
+```
+
+## Accessing User Data in Routes
+
+After authentication, user data is available in `req.user`:
+
+```javascript
+app.get('/profile', (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.redirect('/auth/github');
+  }
+  
+  res.json({
+    username: req.user.username,
+    email: req.user.emails[0].value,
+    avatar: req.user.photos[0].value
+  });
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Google OAuth" icon="google" href="/modules/google-oauth">
+    Add Google authentication to your project
+  </Card>
+  <Card title="Resend OTP" icon="envelope" href="/modules/resend-otp">
+    Add email OTP verification
+  </Card>
+</CardGroup>

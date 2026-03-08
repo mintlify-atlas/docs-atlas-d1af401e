@@ -1,0 +1,673 @@
+---
+title: 'Resend OTP Module'
+description: 'Add email-based OTP verification to your Node.js project using the Resend API'
+icon: 'envelope'
+---
+
+## Overview
+
+The Resend OTP module adds secure email-based one-time password (OTP) verification to your Node.js Express application using the [Resend API](https://resend.com). The module automatically:
+
+- Installs all required dependencies
+- Generates controllers, routes, and middleware
+- Patches your main app file intelligently
+- Injects environment variables to `.env`
+- Supports both JavaScript and TypeScript
+- Includes rate limiting for security
+
+<Note>
+  OTPs are stored in-memory with a 5-minute expiration. For production, consider implementing a persistent storage solution like Redis.
+</Note>
+
+## Installation
+
+Run the following command in your project directory:
+
+```bash
+npx devark add resend-otp
+```
+
+## Interactive Setup
+
+The CLI will guide you through an interactive setup process with the following prompts:
+
+<Steps>
+  <Step title="Select Language">
+    Choose between JavaScript or TypeScript implementation
+    
+    ```
+    ? Which version do you want to add for this module?
+    › JavaScript
+      TypeScript
+    ```
+  </Step>
+
+  <Step title="Specify Entry File">
+    Enter your project's main entry file (relative to root)
+    
+    ```
+    ? Enter your project entry file (relative to root):
+    › app.js (for JavaScript)
+    › src/app.ts (for TypeScript)
+    ```
+    
+    <Note>
+      For TypeScript projects, if the file doesn't exist, Devark will auto-detect `.ts` files in your `src/` directory.
+    </Note>
+  </Step>
+
+  <Step title="Resend API Key">
+    Enter your Resend API key (or leave empty for sample values)
+    
+    ```
+    ? Enter your Resend API Key (leave empty for sample):
+    › sample-resend-api-key
+    ```
+    
+    Get your API key from [Resend Dashboard](https://resend.com/api-keys)
+  </Step>
+
+  <Step title="From Email Address">
+    Enter the email address to send OTPs from
+    
+    ```
+    ? Enter your FROM email address (leave empty for sample):
+    › onboarding@resend.dev
+    ```
+    
+    <Warning>
+      For production, use a verified domain in Resend. The default `onboarding@resend.dev` is for testing only.
+    </Warning>
+  </Step>
+</Steps>
+
+## Dependencies Installed
+
+The module automatically installs the following packages:
+
+### Runtime Dependencies
+```bash
+resend
+express
+express-rate-limit
+dotenv
+```
+
+### TypeScript Dev Dependencies (TypeScript only)
+```bash
+typescript
+ts-node
+@types/node
+@types/express
+```
+
+## Generated File Structure
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```
+    your-project/
+    ├── controllers/
+    │   ├── otp.js              # OTP generation and verification logic
+    │   └── otpFunctions.js     # Request handlers
+    ├── routes/
+    │   └── otpRoutes.js        # API endpoints
+    ├── middleware/
+    │   └── rateLimit.js        # Rate limiting configuration
+    ├── app.js                   # Patched with OTP routes
+    └── .env                     # Environment variables
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```
+    your-project/
+    ├── src/
+    │   ├── controllers/
+    │   │   ├── otp.ts              # OTP generation and verification logic
+    │   │   └── otpFunctions.ts     # Request handlers
+    │   ├── routes/
+    │   │   └── otpRoutes.ts        # API endpoints
+    │   ├── middleware/
+    │   │   └── rateLimit.ts        # Rate limiting configuration
+    │   └── app.ts                   # Patched with OTP routes
+    └── .env                         # Environment variables
+    ```
+  </Tab>
+</Tabs>
+
+## Configuration
+
+The following environment variables are automatically added to your `.env` file:
+
+<ParamField path="RESEND_API_KEY" type="string" required>
+  Your Resend API key from the [Resend Dashboard](https://resend.com/api-keys)
+</ParamField>
+
+<ParamField path="FROM_EMAIL" type="string" required>
+  The email address to send OTPs from. Must be a verified domain in Resend for production use.
+</ParamField>
+
+### Example .env
+```bash
+RESEND_API_KEY=re_123456789
+FROM_EMAIL=onboarding@resend.dev
+```
+
+## Generated Code
+
+### OTP Logic
+
+<Tabs>
+  <Tab title="JavaScript">
+    The module generates `controllers/otp.js`:
+    
+    ```javascript
+    import { Resend } from "resend";
+    import dotenv from "dotenv";
+    import crypto from "crypto";
+
+    dotenv.config();
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const otpStore = new Map();
+    const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
+    export async function sendOtp(email) {
+      const otp = crypto.randomInt(100000, 1000000).toString();
+      const expiresAt = Date.now() + OTP_EXPIRY_MS;
+
+      otpStore.set(email, { otp, expiresAt });
+
+      const htmlContent = `
+        <p>Hello,</p>
+        <p>Your OTP for logging in is:</p>
+        <p><strong>${otp}</strong></p>
+        <p>This OTP will expire in 5 minutes. Do not share it with anyone.</p>
+      `;
+
+      try {
+        await resend.emails.send({
+          from: process.env.FROM_EMAIL,
+          to: email,
+          subject: "Your OTP is",
+          html: htmlContent,
+        });
+        return true;
+      } catch (err) {
+        console.error("Failed to send OTP:", err);
+        return false;
+      }
+    }
+
+    export function verifyOtp(email, otp) {
+      const entry = otpStore.get(email);
+      if (!entry) return false;
+
+      if (Date.now() > entry.expiresAt) {
+        otpStore.delete(email);
+        return false;
+      }
+
+      return entry.otp === otp;
+    }
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    Similar structure with TypeScript types for better type safety.
+  </Tab>
+</Tabs>
+
+### Request Handlers
+
+<Tabs>
+  <Tab title="JavaScript">
+    The module generates `controllers/otpFunctions.js`:
+    
+    ```javascript
+    import { sendOtp, verifyOtp } from "./otp.js";
+
+    export async function sendOtpHandler(req, res) {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: "Email required" });
+      }
+
+      const sent = await sendOtp(email);
+
+      if (sent) {
+        return res.json({
+          message: "OTP sent successfully",
+          success: true,
+        });
+      } else {
+        return res.status(500).json({
+          message: "Failed to send OTP",
+          success: false,
+        });
+      }
+    }
+
+    export function verifyOtpHandler(req, res) {
+      const { email, otp } = req.body;
+
+      if (!email || !otp) {
+        return res.status(400).json({ error: "Email and OTP are required." });
+      }
+
+      const valid = verifyOtp(email, otp);
+
+      if (valid) {
+        return res.status(200).json({ message: "correct" });
+      } else {
+        return res.status(401).json({ error: "incorrect" });
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    Similar structure with typed request and response objects.
+  </Tab>
+</Tabs>
+
+### API Routes
+
+<Tabs>
+  <Tab title="JavaScript">
+    The module generates `routes/otpRoutes.js`:
+    
+    ```javascript
+    import express from "express";
+    import {
+      sendOtpHandler,
+      verifyOtpHandler,
+    } from "../controllers/otpFunctions.js";
+    import { rateLimiter } from "../middleware/rateLimit.js";
+
+    const router = express.Router();
+
+    router.post("/send-otp", rateLimiter, sendOtpHandler);
+    router.post("/verify-otp", rateLimiter, verifyOtpHandler);
+
+    export default router;
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    Similar structure with TypeScript imports.
+  </Tab>
+</Tabs>
+
+### Rate Limiting Middleware
+
+<Tabs>
+  <Tab title="JavaScript">
+    The module generates `middleware/rateLimit.js`:
+    
+    ```javascript
+    import rateLimit from "express-rate-limit";
+
+    export const rateLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 10, // Limit each IP to 10 requests per windowMs
+      message: {
+        success: false,
+        errors: "too many requests, please try again later.",
+        status: 429,
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    Similar structure with TypeScript configuration.
+  </Tab>
+</Tabs>
+
+## API Endpoints
+
+### Send OTP
+
+Sends a 6-digit OTP to the specified email address.
+
+```http
+POST /send-otp
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "OTP sent successfully",
+  "success": true
+}
+```
+
+**Error Response (400):**
+```json
+{
+  "error": "Email required"
+}
+```
+
+**Error Response (500):**
+```json
+{
+  "message": "Failed to send OTP",
+  "success": false
+}
+```
+
+### Verify OTP
+
+Verifies the OTP provided by the user.
+
+```http
+POST /verify-otp
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "correct"
+}
+```
+
+**Error Response (400):**
+```json
+{
+  "error": "Email and OTP are required."
+}
+```
+
+**Error Response (401):**
+```json
+{
+  "error": "incorrect"
+}
+```
+
+## Usage Example
+
+### Frontend Integration
+
+<CodeGroup>
+```javascript fetch
+// Send OTP
+async function sendOTP(email) {
+  const response = await fetch('http://localhost:3000/send-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  return response.json();
+}
+
+// Verify OTP
+async function verifyOTP(email, otp) {
+  const response = await fetch('http://localhost:3000/verify-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otp })
+  });
+  return response.json();
+}
+```
+
+```javascript axios
+import axios from 'axios';
+
+// Send OTP
+async function sendOTP(email) {
+  const { data } = await axios.post('/send-otp', { email });
+  return data;
+}
+
+// Verify OTP
+async function verifyOTP(email, otp) {
+  const { data } = await axios.post('/verify-otp', { email, otp });
+  return data;
+}
+```
+</CodeGroup>
+
+### Complete Flow Example
+
+<Steps>
+  <Step title="User Requests OTP">
+    ```javascript
+    const result = await sendOTP('user@example.com');
+    if (result.success) {
+      console.log('OTP sent! Check your email.');
+    }
+    ```
+  </Step>
+
+  <Step title="User Receives Email">
+    The user receives an email with a 6-digit OTP that expires in 5 minutes.
+  </Step>
+
+  <Step title="User Submits OTP">
+    ```javascript
+    const result = await verifyOTP('user@example.com', '123456');
+    if (result.message === 'correct') {
+      console.log('Verified! Proceed with login.');
+    } else {
+      console.log('Invalid or expired OTP.');
+    }
+    ```
+  </Step>
+</Steps>
+
+## Security Features
+
+<CardGroup cols={2}>
+  <Card title="Rate Limiting" icon="shield">
+    Limits each IP to 10 requests per 15 minutes to prevent abuse
+  </Card>
+  <Card title="OTP Expiration" icon="clock">
+    OTPs automatically expire after 5 minutes
+  </Card>
+  <Card title="Secure Generation" icon="lock">
+    Uses Node.js crypto module for cryptographically secure random numbers
+  </Card>
+  <Card title="Automatic Cleanup" icon="trash">
+    Expired OTPs are automatically removed from storage
+  </Card>
+</CardGroup>
+
+## Customization
+
+### Change OTP Expiration Time
+
+Edit `controllers/otp.js` (or `otp.ts`):
+
+```javascript
+const OTP_EXPIRY_MS = 10 * 60 * 1000; // Change to 10 minutes
+```
+
+### Customize Email Template
+
+Edit the `htmlContent` in the `sendOtp` function:
+
+```javascript
+const htmlContent = `
+  <div style="font-family: Arial, sans-serif;">
+    <h2>Your Verification Code</h2>
+    <p>Enter this code to continue:</p>
+    <h1 style="color: #4F46E5;">${otp}</h1>
+    <p>Valid for 5 minutes</p>
+  </div>
+`;
+```
+
+### Adjust Rate Limiting
+
+Edit `middleware/rateLimit.js`:
+
+```javascript
+export const rateLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 5, // Limit to 5 requests
+  // ...
+});
+```
+
+### Change OTP Length
+
+Edit `controllers/otp.js`:
+
+```javascript
+// For 4-digit OTP
+const otp = crypto.randomInt(1000, 10000).toString();
+
+// For 8-digit OTP
+const otp = crypto.randomInt(10000000, 100000000).toString();
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="OTP emails not being delivered">
+    **Solution:**
+    
+    1. Verify your Resend API key is correct in `.env`
+    2. Check that your `FROM_EMAIL` domain is verified in Resend
+    3. For testing, use `onboarding@resend.dev`
+    4. Check Resend dashboard for delivery logs
+    
+    ```bash
+    # Test your API key
+    curl -X POST 'https://api.resend.com/emails' \
+      -H 'Authorization: Bearer YOUR_API_KEY' \
+      -H 'Content-Type: application/json'
+    ```
+  </Accordion>
+
+  <Accordion title="Rate limit errors (429)">
+    **Solution:** The rate limiter restricts each IP to 10 requests per 15 minutes. Either:
+    
+    - Wait for the rate limit window to reset
+    - Adjust the limits in `middleware/rateLimit.js`
+    - Use different IPs for testing
+  </Accordion>
+
+  <Accordion title="OTP always shows as incorrect">
+    **Solution:**
+    
+    1. Ensure you're using the exact email address for both send and verify
+    2. Check that the OTP hasn't expired (5-minute default)
+    3. Verify the OTP code matches exactly (6 digits)
+    4. Check server logs for any errors during verification
+  </Accordion>
+
+  <Accordion title="TypeScript errors after installation">
+    **Solution:** The module installs TypeScript types automatically. If you still see errors:
+    
+    ```bash
+    npm install --save-dev @types/express @types/node
+    ```
+  </Accordion>
+
+  <Accordion title="Production storage concerns">
+    **Solution:** The default in-memory storage isn't suitable for production with multiple server instances. Consider:
+    
+    - Implementing Redis for distributed OTP storage
+    - Using a database with TTL indexes (MongoDB, PostgreSQL)
+    - Implementing a hash-based approach without server storage
+    
+    Example Redis integration:
+    ```javascript
+    import Redis from 'ioredis';
+    const redis = new Redis();
+    
+    // Store OTP
+    await redis.setex(`otp:${email}`, 300, otp); // 5 min expiry
+    
+    // Verify OTP
+    const stored = await redis.get(`otp:${email}`);
+    const valid = stored === otp;
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Getting a Resend API Key
+
+<Steps>
+  <Step title="Sign Up for Resend">
+    Visit [resend.com](https://resend.com) and create a free account.
+  </Step>
+
+  <Step title="Navigate to API Keys">
+    Go to the [API Keys page](https://resend.com/api-keys) in your dashboard.
+  </Step>
+
+  <Step title="Create New API Key">
+    Click **Create API Key** and give it a descriptive name.
+  </Step>
+
+  <Step title="Copy the Key">
+    Copy the generated API key immediately - it won't be shown again.
+    
+    <Warning>
+      Store your API key securely and never commit it to version control!
+    </Warning>
+  </Step>
+
+  <Step title="Verify Your Domain (Production)">
+    For production use, verify your sending domain:
+    1. Go to **Domains** in Resend dashboard
+    2. Add your domain
+    3. Add the provided DNS records to your domain
+    4. Wait for verification
+  </Step>
+</Steps>
+
+## Production Considerations
+
+<Warning>
+  Before deploying to production, address these security and scalability concerns:
+</Warning>
+
+<AccordionGroup>
+  <Accordion title="Use Persistent Storage">
+    Replace the in-memory `Map` with Redis or a database to support multiple server instances.
+  </Accordion>
+
+  <Accordion title="Implement Account Lockout">
+    Add logic to lock accounts after multiple failed OTP attempts.
+  </Accordion>
+
+  <Accordion title="Log OTP Activities">
+    Track OTP generation and verification for security auditing.
+  </Accordion>
+
+  <Accordion title="Use Verified Domain">
+    Replace `onboarding@resend.dev` with your verified domain email.
+  </Accordion>
+
+  <Accordion title="Add HTTPS in Production">
+    Ensure all API requests are made over HTTPS to prevent interception.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Google OAuth" icon="google" href="/modules/google-oauth">
+    Add Google authentication alongside OTP
+  </Card>
+  <Card title="GitHub OAuth" icon="github" href="/modules/github-oauth">
+    Add GitHub authentication to your project
+  </Card>
+</CardGroup>

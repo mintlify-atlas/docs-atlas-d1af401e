@@ -1,0 +1,126 @@
+---
+title: Introduction
+description: Devark is a modular backend scaffolding CLI that adds production-ready features to your Node.js projects
+---
+
+# Introduction to Devark
+
+Devark is a backend scaffolding CLI tool that brings the modular, "add what you need" philosophy of shadcn/ui to backend development. Instead of starting from scratch or committing to a heavy framework, Devark lets you add production-ready features to your existing Node.js projects with a single command.
+
+## What is Devark?
+
+Devark is a CLI tool that scaffolds modern backend features instantly with modular, production-ready templates. It supports both JavaScript and TypeScript, automatically detects your package manager, and integrates seamlessly into existing projects.
+
+```bash
+devark add google-oauth
+```
+
+That's it. Google OAuth authentication is now integrated into your project with routes, middleware, configuration, and environment variables all set up.
+
+## Why Devark?
+
+Building backend features from scratch is time-consuming and error-prone. Whether it's OAuth flows, email verification, or database setup, you end up writing the same boilerplate code for every new project.
+
+Devark solves this by:
+
+- **Modular approach** - Add only the features you need, when you need them
+- **Production-ready code** - Battle-tested templates that follow best practices
+- **Framework agnostic** - Works with your existing Express.js projects
+- **Language flexible** - Full support for both JavaScript and TypeScript
+- **Smart detection** - Automatically detects your package manager (npm, pnpm, yarn)
+- **Zero configuration** - Sensible defaults with options to customize
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="OAuth Modules" icon="key">
+    Add Google or GitHub OAuth authentication with passport.js integration
+  </Card>
+  <Card title="Email OTP" icon="envelope">
+    Resend-based email verification with stateless HMAC security
+  </Card>
+  <Card title="Project Templates" icon="folder">
+    Scaffold complete Node.js projects with MongoDB or PostgreSQL
+  </Card>
+  <Card title="TypeScript Support" icon="code">
+    Choose JavaScript or TypeScript for any module
+  </Card>
+</CardGroup>
+
+## Available Modules
+
+### Authentication & Authorization
+- **Google OAuth** - Complete OAuth 2.0 flow with passport-google-oauth20
+- **GitHub OAuth** - GitHub authentication with passport integration
+- **Resend OTP** - Email-based OTP verification using Resend API
+
+### Project Templates
+- **Node + MongoDB** - Express.js backend with MongoDB integration
+- **Node + PostgreSQL** - Express.js backend with PostgreSQL setup
+
+### Coming Soon
+- AWS S3 Uploads
+- Payment Integrations (Stripe)
+- React Starter Templates
+
+## How It Works
+
+Devark follows a simple, predictable workflow:
+
+<Steps>
+  <Step title="Validate your project">
+    Ensures you have `package.json` and detects your package manager
+  </Step>
+  <Step title="Install dependencies">
+    Automatically installs required npm packages for the feature
+  </Step>
+  <Step title="Generate code">
+    Creates routes, controllers, and configuration files from templates
+  </Step>
+  <Step title="Update configuration">
+    Modifies your entry file (app.js) and updates .env with required variables
+  </Step>
+</Steps>
+
+All code is generated locally in your project, giving you full control to customize and extend as needed.
+
+## Example: Adding Google OAuth
+
+Here's what happens when you run `devark add google-oauth`:
+
+```bash
+devark add google-oauth
+```
+
+Devark will:
+
+1. Prompt you to choose JavaScript or TypeScript
+2. Ask for your Google OAuth credentials (or use placeholders)
+3. Install dependencies: `passport`, `passport-google-oauth20`, `express-session`
+4. Generate authentication routes and Passport configuration
+5. Update your `app.js` with OAuth middleware
+6. Add environment variables to `.env`
+
+<Note>
+  All generated code is placed in standard directories (`routes/`, `config/`, `controllers/`) making it easy to find and modify.
+</Note>
+
+## Philosophy
+
+Devark is designed to be:
+
+- **Transparent** - All code is generated in your project, no black boxes
+- **Flexible** - Templates are starting points, customize freely
+- **Minimal** - Only adds what you explicitly request
+- **Standard** - Follows Node.js best practices and common patterns
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Get started by installing Devark globally or in your project
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Follow a step-by-step tutorial to add your first feature
+  </Card>
+</CardGroup>

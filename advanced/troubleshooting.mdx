@@ -1,0 +1,668 @@
+---
+title: Troubleshooting
+description: Common issues and solutions when using Devark
+---
+
+This guide covers common issues you might encounter when using Devark and how to resolve them.
+
+## Common Issues
+
+<Accordion title="Package manager not detected">
+  **Problem**: Devark cannot detect your package manager.
+  
+  ```
+  ✔ Could not detect package manager.
+  ```
+  
+  **Cause**: Your project doesn't have a lock file (package-lock.json, yarn.lock, pnpm-lock.yaml, or bun.lockb).
+  
+  **Solution**:
+  
+  <Steps>
+    <Step title="Initialize your project with a package manager">
+      ```bash
+      # For npm
+      npm install
+      
+      # For yarn
+      yarn install
+      
+      # For pnpm
+      pnpm install
+      
+      # For bun
+      bun install
+      ```
+    </Step>
+    
+    <Step title="Re-run Devark">
+      ```bash
+      devark add <module-name>
+      ```
+    </Step>
+  </Steps>
+  
+  **Alternative**: If you're starting fresh, Devark will offer to initialize a project for you. Choose your preferred package manager when prompted.
+</Accordion>
+
+<Accordion title="Entry file not found">
+  **Problem**: Devark can't find your entry file (app.js, src/app.ts, etc.).
+  
+  ```
+  ✖ Entry file "app.js" not found.
+  Please create the entry file and run again.
+  ```
+  
+  **Cause**: The entry file you specified doesn't exist in your project.
+  
+  **Solution**:
+  
+  <Steps>
+    <Step title="Create the entry file">
+      For JavaScript:
+      ```bash
+      touch app.js
+      ```
+      
+      For TypeScript:
+      ```bash
+      mkdir -p src
+      touch src/app.ts
+      ```
+    </Step>
+    
+    <Step title="Add basic Express setup">
+      **app.js (JavaScript)**:
+      ```javascript
+      import express from 'express';
+      
+      const app = express();
+      
+      app.get('/', (req, res) => {
+        res.send('Hello World!');
+      });
+      
+      app.listen(3000, () => {
+        console.log('Server running on http://localhost:3000');
+      });
+      ```
+      
+      **src/app.ts (TypeScript)**:
+      ```typescript
+      import express, { Application, Request, Response } from 'express';
+      
+      const app: Application = express();
+      
+      app.get('/', (req: Request, res: Response) => {
+        res.send('Hello World!');
+      });
+      
+      app.listen(3000, () => {
+        console.log('Server running on http://localhost:3000');
+      });
+      ```
+    </Step>
+    
+    <Step title="Re-run Devark">
+      ```bash
+      devark add <module-name>
+      ```
+    </Step>
+  </Steps>
+  
+  <Warning>
+    For TypeScript projects, make sure your entry file is inside the `src/` directory and uses the `.ts` extension.
+  </Warning>
+</Accordion>
+
+<Accordion title="Dependency installation fails">
+  **Problem**: Dependencies fail to install during module setup.
+  
+  ```
+  ✖ Failed to install dependencies.
+  ```
+  
+  **Common Causes**:
+  
+  1. **Network issues** - npm registry is unreachable
+  2. **Outdated package manager** - Using an old version
+  3. **Permission issues** - Cannot write to node_modules
+  4. **Disk space** - Not enough space for installation
+  
+  **Solutions**:
+  
+  <Steps>
+    <Step title="Check network connection">
+      Test if you can reach npm registry:
+      ```bash
+      npm ping
+      ```
+    </Step>
+    
+    <Step title="Update your package manager">
+      ```bash
+      # For npm
+      npm install -g npm@latest
+      
+      # For yarn
+      npm install -g yarn@latest
+      
+      # For pnpm
+      npm install -g pnpm@latest
+      
+      # For bun
+      curl -fsSL https://bun.sh/install | bash
+      ```
+    </Step>
+    
+    <Step title="Clear cache">
+      ```bash
+      # For npm
+      npm cache clean --force
+      
+      # For yarn
+      yarn cache clean
+      
+      # For pnpm
+      pnpm store prune
+      
+      # For bun
+      rm -rf ~/.bun/install/cache
+      ```
+    </Step>
+    
+    <Step title="Install dependencies manually">
+      Check the error message for which packages failed, then:
+      ```bash
+      npm install <package-name>
+      ```
+    </Step>
+    
+    <Step title="Check permissions">
+      If you get permission errors:
+      ```bash
+      # Don't use sudo! Instead, fix npm permissions:
+      mkdir ~/.npm-global
+      npm config set prefix '~/.npm-global'
+      export PATH=~/.npm-global/bin:$PATH
+      ```
+      
+      Add the export line to your `~/.bashrc` or `~/.zshrc`.
+    </Step>
+  </Steps>
+</Accordion>
+
+<Accordion title="Module already exists error">
+  **Problem**: Trying to add a module that's already been added.
+  
+  ```
+  ✖ This module appears to be already installed.
+  ```
+  
+  **Cause**: The module's files (routes, config) already exist in your project.
+  
+  **Solution**:
+  
+  <Steps>
+    <Step title="Check existing files">
+      ```bash
+      # Look for module files
+      ls config/
+      ls routes/
+      ```
+    </Step>
+    
+    <Step title="Remove module files (if you want to reinstall)">
+      ```bash
+      # Example for google-oauth
+      rm config/googleStrategy.js
+      rm routes/googleAuthRoutes.js
+      ```
+      
+      <Warning>
+        Only remove files if you haven't made custom changes. Back up first if unsure.
+      </Warning>
+    </Step>
+    
+    <Step title="Clean up app.js imports">
+      Remove module-related imports from your entry file:
+      ```javascript
+      // Remove lines like:
+      import googleAuthRoutes from './routes/googleAuthRoutes.js';
+      import './config/googleStrategy.js';
+      ```
+    </Step>
+    
+    <Step title="Re-run Devark">
+      ```bash
+      devark add <module-name>
+      ```
+    </Step>
+  </Steps>
+</Accordion>
+
+<Accordion title="Permission errors on Linux/Mac">
+  **Problem**: Getting EACCES or EPERM errors.
+  
+  ```
+  Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules'
+  ```
+  
+  **Cause**: Trying to install global packages without proper permissions.
+  
+  **Solution**:
+  
+  <Steps>
+    <Step title="NEVER use sudo with npm">
+      Using `sudo` can cause permission issues. Instead, configure npm properly.
+    </Step>
+    
+    <Step title="Change npm's default directory">
+      ```bash
+      mkdir ~/.npm-global
+      npm config set prefix '~/.npm-global'
+      ```
+    </Step>
+    
+    <Step title="Update PATH">
+      Add to `~/.bashrc`, `~/.zshrc`, or `~/.profile`:
+      ```bash
+      export PATH=~/.npm-global/bin:$PATH
+      ```
+      
+      Then reload:
+      ```bash
+      source ~/.bashrc  # or ~/.zshrc
+      ```
+    </Step>
+    
+    <Step title="Reinstall global packages">
+      ```bash
+      npm install -g devark
+      ```
+    </Step>
+  </Steps>
+  
+  **For pnpm users**:
+  ```bash
+  pnpm setup
+  source ~/.bashrc  # or ~/.zshrc
+  ```
+</Accordion>
+
+<Accordion title="Git conflicts after adding module">
+  **Problem**: Git shows conflicts in app.js or other files.
+  
+  **Cause**: Devark modified files that you had uncommitted changes in.
+  
+  **Solution**:
+  
+  <Steps>
+    <Step title="Stash your changes before running Devark">
+      ```bash
+      git stash
+      devark add <module-name>
+      git stash pop
+      ```
+    </Step>
+    
+    <Step title="Resolve conflicts manually">
+      If conflicts occur:
+      ```bash
+      # Open the conflicting file
+      code app.js  # or vim, nano, etc.
+      
+      # Look for conflict markers:
+      # <<<<<<< HEAD
+      # Your changes
+      # =======
+      # Devark's changes
+      # >>>>>>> 
+      
+      # Keep both sets of changes, removing conflict markers
+      ```
+    </Step>
+    
+    <Step title="Test your app">
+      ```bash
+      npm start
+      # or
+      node app.js
+      ```
+    </Step>
+    
+    <Step title="Commit the resolved changes">
+      ```bash
+      git add .
+      git commit -m "feat: add <module-name> and resolve conflicts"
+      ```
+    </Step>
+  </Steps>
+</Accordion>
+
+<Accordion title="TypeScript compilation errors">
+  **Problem**: TypeScript errors after adding a module.
+  
+  ```
+  error TS2307: Cannot find module 'express' or its corresponding type declarations.
+  ```
+  
+  **Cause**: Type definitions are missing or tsconfig.json is misconfigured.
+  
+  **Solution**:
+  
+  <Steps>
+    <Step title="Install missing type definitions">
+      ```bash
+      npm install -D @types/express @types/node
+      # or for specific modules
+      npm install -D @types/passport @types/express-session
+      ```
+    </Step>
+    
+    <Step title="Check tsconfig.json">
+      Ensure your `tsconfig.json` includes:
+      ```json
+      {
+        "compilerOptions": {
+          "target": "ES2020",
+          "module": "ESNext",
+          "moduleResolution": "node",
+          "esModuleInterop": true,
+          "strict": true,
+          "skipLibCheck": true,
+          "outDir": "./dist",
+          "rootDir": "./src"
+        },
+        "include": ["src/**/*"],
+        "exclude": ["node_modules"]
+      }
+      ```
+    </Step>
+    
+    <Step title="Rebuild the project">
+      ```bash
+      npx tsc
+      ```
+    </Step>
+  </Steps>
+</Accordion>
+
+<Accordion title="Module not found: Cannot find module './routes/...'">
+  **Problem**: Node.js can't find the module files that Devark created.
+  
+  ```
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module './routes/googleAuthRoutes.js'
+  ```
+  
+  **Cause**: File path mismatch or files weren't created in the expected location.
+  
+  **Solution**:
+  
+  <Steps>
+    <Step title="Verify files were created">
+      ```bash
+      ls routes/
+      ls config/
+      # or for TypeScript
+      ls src/routes/
+      ls src/config/
+      ```
+    </Step>
+    
+    <Step title="Check import paths in app.js">
+      For JavaScript (files in root):
+      ```javascript
+      import googleAuthRoutes from './routes/googleAuthRoutes.js';
+      ```
+      
+      For TypeScript (files in src/):
+      ```typescript
+      import googleAuthRoutes from './routes/googleAuthRoutes.js';
+      // Note: Still use .js extension, not .ts
+      ```
+    </Step>
+    
+    <Step title="Check package.json for type">
+      Ensure you have:
+      ```json
+      {
+        "type": "module"
+      }
+      ```
+      
+      This enables ES modules (import/export syntax).
+    </Step>
+    
+    <Step title="Try absolute path temporarily">
+      To debug, use absolute path:
+      ```javascript
+      import { fileURLToPath } from 'url';
+      import path from 'path';
+      
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      
+      const routesPath = path.join(__dirname, 'routes', 'googleAuthRoutes.js');
+      console.log('Looking for routes at:', routesPath);
+      ```
+    </Step>
+  </Steps>
+</Accordion>
+
+<Accordion title="Environment variables not loading">
+  **Problem**: OAuth credentials or other env vars aren't being read.
+  
+  ```
+  ClientID: undefined
+  ClientSecret: undefined
+  ```
+  
+  **Cause**: .env file isn't being loaded or is in the wrong location.
+  
+  **Solution**:
+  
+  <Steps>
+    <Step title="Check .env file exists">
+      ```bash
+      cat .env
+      ```
+      
+      Should show:
+      ```
+      GOOGLE_CLIENT_ID=your-client-id
+      GOOGLE_CLIENT_SECRET=your-client-secret
+      SESSION_SECRET=your-session-secret
+      ```
+    </Step>
+    
+    <Step title="Ensure dotenv is loaded early">
+      At the top of your entry file:
+      ```javascript
+      import 'dotenv/config';
+      // All other imports after this
+      ```
+    </Step>
+    
+    <Step title="Check .env location">
+      The .env file should be in your project root (same directory as package.json):
+      ```
+      project/
+      ├── .env          ← Here
+      ├── package.json
+      ├── app.js
+      └── ...
+      ```
+    </Step>
+    
+    <Step title="Debug env loading">
+      Add debug logging:
+      ```javascript
+      import 'dotenv/config';
+      console.log('Env loaded:', {
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        hasSecret: !!process.env.GOOGLE_CLIENT_SECRET
+      });
+      ```
+    </Step>
+    
+    <Step title="Check for .env in .gitignore">
+      Ensure .env is in `.gitignore` (for security):
+      ```bash
+      echo ".env" >> .gitignore
+      ```
+    </Step>
+  </Steps>
+</Accordion>
+
+<Accordion title="Port already in use">
+  **Problem**: Can't start server because port 3000 is already in use.
+  
+  ```
+  Error: listen EADDRINUSE: address already in use :::3000
+  ```
+  
+  **Solution**:
+  
+  <Steps>
+    <Step title="Find process using the port">
+      ```bash
+      # On Linux/Mac
+      lsof -i :3000
+      
+      # On Windows
+      netstat -ano | findstr :3000
+      ```
+    </Step>
+    
+    <Step title="Kill the process">
+      ```bash
+      # On Linux/Mac
+      kill -9 <PID>
+      
+      # On Windows
+      taskkill /PID <PID> /F
+      ```
+    </Step>
+    
+    <Step title="Or use a different port">
+      Change in your app.js:
+      ```javascript
+      const PORT = process.env.PORT || 3001;
+      app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+      });
+      ```
+    </Step>
+  </Steps>
+</Accordion>
+
+## Debug Mode
+
+For advanced debugging, you can enable verbose logging:
+
+```bash
+# Set NODE_DEBUG environment variable
+NODE_DEBUG=devark devark add google-oauth
+
+# Or with more detail
+DEBUG=* devark add google-oauth
+```
+
+<Card title="Still Having Issues?" icon="life-ring">
+  If your issue isn't covered here, please report it on GitHub Issues with:
+  - Devark version (`devark --version`)
+  - Node.js version (`node --version`)
+  - Package manager and version
+  - Full error message
+  - Steps to reproduce
+</Card>
+
+## Reporting Bugs
+
+Found a bug? Help us fix it!
+
+<Steps>
+  <Step title="Search existing issues">
+    Check if the bug has already been reported:
+    [https://github.com/huzfm/Devark/issues](https://github.com/huzfm/Devark/issues)
+  </Step>
+  
+  <Step title="Create a new issue">
+    If not found, create a new issue with:
+    
+    **Title**: Brief description
+    
+    **Description**:
+    - What you were trying to do
+    - What happened
+    - What you expected to happen
+    
+    **Environment**:
+    ```
+    - OS: [e.g., Ubuntu 22.04, macOS 13, Windows 11]
+    - Node.js version: [e.g., 18.16.0]
+    - Package manager: [e.g., npm 9.5.0]
+    - Devark version: [e.g., 1.1.1]
+    ```
+    
+    **Steps to reproduce**:
+    1. Run `devark add google-oauth`
+    2. Select JavaScript
+    3. ...
+    
+    **Error message**:
+    ```
+    Paste full error here
+    ```
+  </Step>
+  
+  <Step title="Include relevant files">
+    If possible, include:
+    - Your package.json
+    - Your app.js/app.ts (with sensitive data removed)
+    - Screenshots of the error
+  </Step>
+</Steps>
+
+## Getting Help
+
+Need help beyond troubleshooting?
+
+<CardGroup cols={2}>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/huzfm/Devark/issues">
+    Report bugs and request features
+  </Card>
+  
+  <Card title="GitHub Discussions" icon="comments" href="https://github.com/huzfm/Devark/discussions">
+    Ask questions and share ideas
+  </Card>
+</CardGroup>
+
+## Quick Fixes Summary
+
+| Issue | Quick Fix |
+|-------|----------|
+| Package manager not detected | Run `npm install` to create package-lock.json |
+| Entry file not found | Create app.js or src/app.ts |
+| Permission errors | Configure npm prefix: `npm config set prefix '~/.npm-global'` |
+| Module not found | Check `"type": "module"` in package.json |
+| Env vars not loading | Add `import 'dotenv/config'` at top of entry file |
+| Port in use | Use different port or kill process on port 3000 |
+| TypeScript errors | Install missing @types: `npm i -D @types/express @types/node` |
+
+<Warning>
+  Always backup your project before troubleshooting, especially when manually editing files or removing modules.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Module Structure" icon="sitemap" href="/advanced/module-structure">
+    Understand how modules work
+  </Card>
+  
+  <Card title="Contributing" icon="code-pull-request" href="/advanced/contributing">
+    Help improve Devark
+  </Card>
+</CardGroup>

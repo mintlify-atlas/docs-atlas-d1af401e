@@ -1,0 +1,602 @@
+---
+title: Node + PostgreSQL Template
+description: Create a full-stack Node.js backend with PostgreSQL and Prisma ORM
+---
+
+The Node + PostgreSQL template scaffolds a complete backend application with Express server, PostgreSQL database integration using Prisma ORM, and example CRUD operations.
+
+## What Gets Generated
+
+This template creates a production-ready Node.js application with:
+
+- Express server with middleware setup
+- PostgreSQL integration using Prisma ORM
+- Type-safe database queries with Prisma Client
+- MVC architecture with routes and controllers
+- Example User model with full CRUD operations
+- Database migration system
+- Development tooling (nodemon, morgan logger)
+- Environment configuration
+- TypeScript or JavaScript variants
+
+## Create a New Project
+
+<Steps>
+  <Step title="Run the template command">
+    ```bash
+    devark template node-postgresql my-app
+    ```
+    
+    Or use the shorthand:
+    ```bash
+    devark t node-postgresql my-app
+    ```
+  </Step>
+
+  <Step title="Choose your language">
+    The CLI will prompt you to select JavaScript or TypeScript:
+    
+    ```
+    ? Which language do you want to use?
+    > JavaScript
+      TypeScript
+    ```
+  </Step>
+
+  <Step title="Wait for installation">
+    Devark will:
+    - Create the project structure
+    - Generate all template files
+    - Install dependencies automatically
+    - Set up Prisma configuration
+  </Step>
+
+  <Step title="Initialize Prisma">
+    After installation, run these commands:
+    
+    ```bash
+    cd my-app
+    npx prisma generate
+    npx prisma migrate dev --name "init"
+    ```
+  </Step>
+</Steps>
+
+## Project Structure
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```
+    my-app/
+    ├── controllers/
+    │   └── userController.js    # User CRUD operations
+    ├── routes/
+    │   └── userRoutes.js        # User API endpoints
+    ├── utils/
+    │   └── prismaClient.js      # Prisma client singleton
+    ├── prisma/
+    │   └── schema.prisma        # Database schema
+    ├── app.js                   # Express server entry point
+    ├── .env.example             # Environment variables template
+    ├── .gitignore              # Git ignore rules
+    ├── package.json            # Project dependencies
+    └── Instructions.md         # Setup instructions
+    ```
+  </Tab>
+  
+  <Tab title="TypeScript">
+    ```
+    my-app/
+    ├── src/
+    │   ├── controllers/
+    │   │   └── userController.ts
+    │   ├── routes/
+    │   │   └── userRoutes.ts
+    │   ├── utils/
+    │   │   └── prismaClient.ts
+    │   └── app.ts
+    ├── prisma/
+    │   └── schema.prisma
+    ├── .env.example
+    ├── .gitignore
+    ├── package.json
+    ├── tsconfig.json
+    └── Instructions.md
+    ```
+  </Tab>
+</Tabs>
+
+## Generated Files
+
+### Express Server (app.js/app.ts)
+
+The main application file configures Express with middleware:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```javascript
+    import express from "express";
+    import morgan from "morgan";
+    import dotenv from "dotenv";
+    import userRoutes from "./routes/userRoutes.js";
+
+    dotenv.config();
+
+    const app = express();
+
+    // Middleware
+    app.use(express.json());
+    app.use(morgan("dev"));
+
+    // Routes
+    app.use("/api/users", userRoutes);
+
+    // Health check
+    app.get("/", (req, res) => {
+      res.send("Node.js + PostgreSQL + Prisma API is running...");
+    });
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+    ```
+  </Tab>
+  
+  <Tab title="TypeScript">
+    ```typescript
+    import express from "express";
+    import dotenv from "dotenv";
+    import morgan from "morgan";
+    import userRoutes from "./routes/userRoutes";
+
+    dotenv.config();
+
+    const app = express();
+    app.use(express.json());
+    app.use(morgan("dev"));
+
+    app.use("/api", userRoutes);
+
+    app.get("/", (req, res) => {
+      res.json({ message: "Node PostgreSQL TypeScript is running" });
+    });
+
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### Prisma Schema (prisma/schema.prisma)
+
+Database schema definition with PostgreSQL provider:
+
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+```
+
+<Note>
+  Prisma provides type-safe database access and automatic migrations. The schema defines your database structure in a declarative way.
+</Note>
+
+### Prisma Client (utils/prismaClient.js)
+
+Singleton instance of Prisma Client with connection testing:
+
+```javascript
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+async function testConnection() {
+  try {
+    await prisma.$connect();
+    console.log("Successfully connected to PostgreSQL via Prisma!");
+  } catch (err) {
+    console.error("Failed to connect to PostgreSQL:", err);
+  }
+}
+
+testConnection();
+
+export default prisma;
+```
+
+### User Routes (routes/userRoutes.js)
+
+RESTful API endpoints:
+
+```javascript
+import express from "express";
+import { 
+  getUsers, 
+  createUser, 
+  getUserById, 
+  deleteUser, 
+  updateUser 
+} from "../controllers/userController.js";
+
+const router = express.Router();
+
+router.get("/", getUsers);
+router.post("/", createUser);
+router.get("/:id", getUserById);
+router.patch("/:id", updateUser);
+router.delete("/:id", deleteUser);
+
+export default router;
+```
+
+### User Controller (controllers/userController.js)
+
+Type-safe CRUD operations using Prisma:
+
+```javascript
+import prisma from "../utils/prismaClient.js";
+
+// Create User
+export const createUser = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    const user = await prisma.user.create({
+      data: { name, email },
+    });
+    res.status(201).json(user);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Read All Users
+export const getUsers = async (req, res) => {
+  try {
+    const users = await prisma.user.findMany();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Read One User by ID
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(id) },
+    });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update User
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email } = req.body;
+    const user = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: { name, email },
+    });
+    res.json(user);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Delete User
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.user.delete({
+      where: { id: parseInt(id) },
+    });
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+```
+
+## Dependencies
+
+### Production Dependencies
+
+<CardGroup cols={2}>
+  <Card title="express" icon="server">
+    Fast, minimalist web framework for Node.js
+  </Card>
+  <Card title="@prisma/client" icon="database">
+    Auto-generated type-safe database client
+  </Card>
+  <Card title="dotenv" icon="key">
+    Load environment variables from .env file
+  </Card>
+  <Card title="morgan" icon="list">
+    HTTP request logger middleware
+  </Card>
+</CardGroup>
+
+### Development Dependencies
+
+<Tabs>
+  <Tab title="JavaScript">
+    - **prisma** - Prisma CLI for migrations and schema management
+    - **nodemon** - Auto-restart server on file changes
+  </Tab>
+  
+  <Tab title="TypeScript">
+    - **prisma** - Prisma CLI for migrations
+    - **typescript** - TypeScript compiler
+    - **ts-node** - Execute TypeScript directly
+    - **nodemon** - Auto-restart on changes
+    - **@types/node** - Node.js type definitions
+    - **@types/express** - Express type definitions
+    - **@types/morgan** - Morgan type definitions
+  </Tab>
+</Tabs>
+
+## NPM Scripts
+
+```json
+{
+  "scripts": {
+    "dev": "nodemon app.js",
+    "start": "node app.js",
+    "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio"
+  }
+}
+```
+
+### Script Descriptions
+
+- **dev** - Start development server with auto-reload
+- **start** - Start production server
+- **prisma:migrate** - Create and apply database migrations
+- **prisma:generate** - Generate Prisma Client from schema
+- **prisma:studio** - Open Prisma Studio (database GUI)
+
+## Environment Variables
+
+Create a `.env` file in your project root:
+
+```bash
+DATABASE_URL="postgresql://username:password@localhost:5432/mydb?schema=public"
+PORT=5000
+```
+
+<Warning>
+  Update the `DATABASE_URL` with your actual PostgreSQL credentials. Never commit `.env` files to version control.
+</Warning>
+
+## TypeScript Configuration
+
+The TypeScript variant includes `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "nodenext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true
+  },
+  "include": ["src"]
+}
+```
+
+## Running the Project
+
+<Steps>
+  <Step title="Install PostgreSQL">
+    Make sure PostgreSQL is installed and running:
+    
+    ```bash
+    # macOS
+    brew services start postgresql
+    
+    # Linux
+    sudo systemctl start postgresql
+    
+    # Or use Docker
+    docker run -d \
+      --name postgres \
+      -e POSTGRES_PASSWORD=mypassword \
+      -e POSTGRES_DB=mydb \
+      -p 5432:5432 \
+      postgres:latest
+    ```
+  </Step>
+
+  <Step title="Configure environment">
+    Copy `.env.example` to `.env` and update the database URL:
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Update `DATABASE_URL` with your PostgreSQL credentials.
+  </Step>
+
+  <Step title="Generate Prisma Client">
+    Generate the Prisma Client from your schema:
+    
+    ```bash
+    npx prisma generate
+    ```
+  </Step>
+
+  <Step title="Run database migrations">
+    Create the database tables:
+    
+    ```bash
+    npx prisma migrate dev --name "init"
+    ```
+    
+    This creates the User table in your PostgreSQL database.
+  </Step>
+
+  <Step title="Start development server">
+    ```bash
+    npm run dev
+    ```
+    
+    The server will start on `http://localhost:5000`.
+  </Step>
+
+  <Step title="Test the API">
+    Create a user:
+    ```bash
+    curl -X POST http://localhost:5000/api/users \
+      -H "Content-Type: application/json" \
+      -d '{"name": "Jane Doe", "email": "jane@example.com"}'
+    ```
+    
+    Get all users:
+    ```bash
+    curl http://localhost:5000/api/users
+    ```
+  </Step>
+</Steps>
+
+## Prisma Commands
+
+<CardGroup cols={2}>
+  <Card title="prisma generate" icon="gear">
+    Generate Prisma Client after schema changes
+  </Card>
+  <Card title="prisma migrate dev" icon="database">
+    Create and apply database migrations
+  </Card>
+  <Card title="prisma studio" icon="window">
+    Open visual database editor in browser
+  </Card>
+  <Card title="prisma db push" icon="arrow-up">
+    Push schema changes without migrations
+  </Card>
+</CardGroup>
+
+## API Endpoints
+
+The generated User API includes:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/users` | Create a new user |
+| GET | `/api/users` | Get all users |
+| GET | `/api/users/:id` | Get user by ID |
+| PATCH | `/api/users/:id` | Update user by ID |
+| DELETE | `/api/users/:id` | Delete user by ID |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Add Relations" icon="link">
+    Extend your Prisma schema with relational models (Posts, Comments, etc.)
+  </Card>
+  <Card title="Add Authentication" icon="lock">
+    Implement JWT or session-based authentication
+  </Card>
+  <Card title="Use Prisma Studio" icon="database">
+    Explore your data with `npx prisma studio`
+  </Card>
+  <Card title="Add Validation" icon="circle-check">
+    Install Zod or express-validator for request validation
+  </Card>
+</CardGroup>
+
+### Working with Prisma Schema
+
+Add more models to `prisma/schema.prisma`:
+
+```prisma
+model Post {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  posts     Post[]   // Relation to Post
+  createdAt DateTime @default(now())
+}
+```
+
+After modifying the schema:
+
+```bash
+npx prisma generate
+npx prisma migrate dev --name "add-posts"
+```
+
+### Adding More Devark Modules
+
+Enhance your project with additional Devark modules:
+
+```bash
+# Add authentication
+devark module auth
+
+# Add email functionality
+devark module email
+
+# Add file uploads
+devark module upload
+```
+
+### Customization Tips
+
+- **Prisma Relations**: Add relationships between models for complex data structures
+- **Prisma Middleware**: Add logging, soft deletes, or data transformation
+- **Error Handling**: Create custom error handler middleware
+- **Validation**: Use Prisma's built-in validation or add Zod/Joi
+- **Pagination**: Implement cursor or offset-based pagination with Prisma
+- **Seeding**: Create `prisma/seed.js` to populate your database
+
+## Prisma Studio
+
+Prisma Studio provides a visual interface to view and edit your data:
+
+```bash
+npx prisma studio
+```
+
+This opens a browser interface at `http://localhost:5555` where you can:
+- Browse all tables and records
+- Create, update, and delete records
+- Filter and sort data
+- View relationships between models
+
+<Note>
+  Prisma automatically generates TypeScript types from your schema, providing full type safety and IntelliSense in your code editor.
+</Note>

@@ -1,0 +1,455 @@
+---
+title: 'Environment Variables'
+description: 'How Devark manages environment variables across modules'
+icon: 'key'
+---
+
+## Overview
+
+Devark automatically manages environment variables for all modules. When you install a module, Devark:
+
+1. Creates or updates your `.env` file
+2. Injects required environment variables
+3. Preserves existing variables
+4. Uses atomic file operations to prevent data loss
+
+<Note>
+Environment variables are stored in `.env` files and are **never committed to version control**. Devark automatically adds `.env` to your `.gitignore` file.
+</Note>
+
+## How Auto-Injection Works
+
+Devark uses smart merging logic to handle environment variables:
+
+<Steps>
+  <Step title="Read existing .env file">
+    If `.env` exists, Devark reads all current variables into memory.
+  </Step>
+  
+  <Step title="Merge new variables">
+    New variables from the module are merged with existing ones. **Existing variables are never overwritten**.
+  </Step>
+  
+  <Step title="Atomic write operation">
+    Variables are written to a temporary file, synced to disk, then atomically renamed to `.env` to prevent corruption.
+  </Step>
+  
+  <Step title="Confirm to user">
+    Devark displays a message indicating whether credentials were added or sample values were used.
+  </Step>
+</Steps>
+
+## Implementation Details
+
+Here's how Devark's `injectEnvVars` function works:
+
+```javascript src/utils/injectEnvVars.js
+import fs from "fs";
+import path from "path";
+
+export function injectEnvVars(targetPath, vars) {
+  if (!fs.existsSync(targetPath)) {
+    fs.mkdirSync(targetPath, { recursive: true });
+  }
+
+  const envPath = path.join(targetPath, ".env");
+  let envContent = "";
+  if (fs.existsSync(envPath)) {
+    envContent = fs.readFileSync(envPath, "utf-8");
+  }
+
+  // Parse existing variables
+  const envMap = new Map(
+    envContent
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [k, ...v] = line.split("=");
+        return [k, v.join("=")];
+      })
+  );
+
+  // Merge new variables (only if they have values)
+  for (const [key, value] of Object.entries(vars)) {
+    if (value) envMap.set(key, value);
+  }
+
+  const content = Array.from(envMap.entries())
+    .map(([k, v]) => `${k}=${v}`)
+    .join("\n");
+
+  // Atomic write operation
+  const tmpPath = envPath + ".tmp";
+  try {
+    fs.writeFileSync(tmpPath, content, "utf-8");
+    try {
+      const fd = fs.openSync(tmpPath, "r");
+      fs.fsyncSync(fd);
+      fs.closeSync(fd);
+    } catch (err) {
+      // Sync not supported on all systems
+    }
+    fs.renameSync(tmpPath, envPath);
+  } catch (err) {
+    // Fallback to direct write
+    fs.writeFileSync(envPath, content, "utf-8");
+  }
+}
+```
+
+<Accordion title="Why atomic writes?">
+  Atomic writes prevent data loss if the process is interrupted:
+  1. Write to temporary file (`.env.tmp`)
+  2. Sync to disk to ensure write completes
+  3. Rename temp file to `.env` (atomic operation on most filesystems)
+  
+  This ensures you never end up with a corrupted or partially-written `.env` file.
+</Accordion>
+
+## Environment Variables by Module
+
+Each Devark module requires specific environment variables:
+
+### Google OAuth
+
+```bash .env
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+SESSION_SECRET=your-session-secret
+```
+
+<Accordion title="How to get credentials">
+  1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+  2. Create a new project or select existing
+  3. Navigate to **APIs & Services > Credentials**
+  4. Create **OAuth 2.0 Client ID**
+  5. Set authorized redirect URI to your callback URL
+  6. Copy Client ID and Client Secret
+</Accordion>
+
+### GitHub OAuth
+
+```bash .env
+GITHUB_CLIENT_ID=your-client-id
+GITHUB_CLIENT_SECRET=your-client-secret
+GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
+SESSION_SECRET=your-session-secret
+```
+
+<Accordion title="How to get credentials">
+  1. Go to GitHub Settings > Developer settings
+  2. Select **OAuth Apps** or **GitHub Apps**
+  3. Click **New OAuth App**
+  4. Set authorization callback URL
+  5. Copy Client ID and generate Client Secret
+</Accordion>
+
+### Resend OTP
+
+```bash .env
+RESEND_API_KEY=re_123456789
+FROM_EMAIL=noreply@yourdomain.com
+```
+
+<Accordion title="How to get API key">
+  1. Sign up at [Resend](https://resend.com/)
+  2. Navigate to **API Keys** in dashboard
+  3. Create new API key
+  4. Verify your sending domain
+  5. Use verified domain in `FROM_EMAIL`
+</Accordion>
+
+### MongoDB Template
+
+```bash .env
+MONGO_URI=mongodb://localhost:27017/myapp
+PORT=3000
+```
+
+### PostgreSQL Template
+
+```bash .env
+DATABASE_URL=postgresql://user:password@localhost:5432/mydb
+PORT=3000
+```
+
+## Interactive Prompts
+
+When installing a module, Devark prompts for credentials:
+
+<CodeGroup>
+```bash Google OAuth Example
+? Enter your Google Client ID (leave empty for sample): 
+  your-client-id
+
+? Enter your Google Client Secret (leave empty for sample):
+  your-client-secret
+
+? Enter your Google Callback URL:
+  http://localhost:3000/auth/google/callback
+
+? Enter your session secret (leave empty for sample):
+  my-super-secret-key
+
+✓ .env updated with credentials you provided
+```
+
+```bash Skipping Credentials (Sample Values)
+? Enter your Google Client ID (leave empty for sample): 
+  [Enter]
+
+? Enter your Google Client Secret (leave empty for sample):
+  [Enter]
+
+✓ .env created with sample values.
+```
+</CodeGroup>
+
+<Tip>
+**You can always leave credentials empty during installation** and update them later in your `.env` file. Devark will use placeholder values.
+</Tip>
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Never Commit .env" icon="ban">
+    Your `.env` file contains sensitive credentials. Devark automatically adds it to `.gitignore`, but always verify:
+    
+    ```bash .gitignore
+    node_modules/
+    .env
+    .env.local
+    .env.*.local
+    dist/
+    ```
+  </Card>
+  
+  <Card title="Use .env.example" icon="file">
+    Create a template file for your team:
+    
+    ```bash .env.example
+    GOOGLE_CLIENT_ID=
+    GOOGLE_CLIENT_SECRET=
+    GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+    SESSION_SECRET=
+    ```
+    
+    **Commit this file** to version control as documentation.
+  </Card>
+  
+  <Card title="Rotate Secrets Regularly" icon="rotate">
+    - Rotate API keys every 90 days
+    - Use different credentials for dev/staging/production
+    - Revoke compromised keys immediately
+  </Card>
+  
+  <Card title="Use Environment-Specific Files" icon="layer-group">
+    For different environments:
+    
+    ```bash
+    .env.development
+    .env.staging
+    .env.production
+    ```
+    
+    Load the correct file based on `NODE_ENV`.
+  </Card>
+</CardGroup>
+
+## Working with Teams
+
+### Setup for New Team Members
+
+<Steps>
+  <Step title="Clone repository">
+    ```bash
+    git clone https://github.com/your-org/your-project.git
+    cd your-project
+    ```
+  </Step>
+  
+  <Step title="Copy .env.example to .env">
+    ```bash
+    cp .env.example .env
+    ```
+  </Step>
+  
+  <Step title="Fill in credentials">
+    Share development credentials securely (use password manager, not Slack/email):
+    ```bash .env
+    GOOGLE_CLIENT_ID=dev-client-id-from-team
+    GOOGLE_CLIENT_SECRET=dev-client-secret-from-team
+    SESSION_SECRET=dev-session-secret
+    ```
+  </Step>
+  
+  <Step title="Install dependencies and run">
+    ```bash
+    npm install
+    npm run dev
+    ```
+  </Step>
+</Steps>
+
+### Sharing Credentials Securely
+
+<Warning>
+**Never share credentials via:**
+- Slack or other chat platforms
+- Email
+- Public documentation
+- Code comments
+</Warning>
+
+<Tip>
+**Use secure methods:**
+- Password managers (1Password, LastPass, Bitwarden)
+- Encrypted secret management (AWS Secrets Manager, HashiCorp Vault)
+- Temporary secure sharing tools (Bitwarden Send, 1Password Share)
+</Tip>
+
+## Advanced Usage
+
+### Loading Environment Variables
+
+Devark-generated code automatically loads environment variables using `dotenv`:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```javascript
+    import dotenv from 'dotenv';
+    dotenv.config();
+    
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    ```
+  </Tab>
+  
+  <Tab title="TypeScript">
+    ```typescript
+    import dotenv from "dotenv";
+    dotenv.config();
+    
+    const clientId: string = process.env.GOOGLE_CLIENT_ID!;
+    // Non-null assertion (!) tells TypeScript we guarantee this exists
+    ```
+  </Tab>
+</Tabs>
+
+### Multiple Environment Files
+
+Load different configs based on `NODE_ENV`:
+
+```javascript
+import dotenv from 'dotenv';
+import path from 'path';
+
+const envFile = process.env.NODE_ENV === 'production' 
+  ? '.env.production' 
+  : '.env.development';
+
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+```
+
+### Validating Required Variables
+
+Ensure all required variables are set:
+
+```javascript
+const requiredEnvVars = [
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'SESSION_SECRET'
+];
+
+for (const varName of requiredEnvVars) {
+  if (!process.env[varName]) {
+    throw new Error(`Missing required environment variable: ${varName}`);
+  }
+}
+```
+
+### TypeScript Type Safety
+
+Create a typed config object:
+
+```typescript config.ts
+interface Config {
+  googleClientId: string;
+  googleClientSecret: string;
+  callbackUrl: string;
+  sessionSecret: string;
+}
+
+export const config: Config = {
+  googleClientId: process.env.GOOGLE_CLIENT_ID!,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+  callbackUrl: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/auth/google/callback',
+  sessionSecret: process.env.SESSION_SECRET!,
+};
+
+// Validate on startup
+Object.entries(config).forEach(([key, value]) => {
+  if (!value) {
+    throw new Error(`Missing required config: ${key}`);
+  }
+});
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Environment variables not loading">
+    **Check these common issues:**
+    
+    1. `.env` file exists in project root (not in subdirectory)
+    2. `dotenv.config()` is called before accessing variables
+    3. Variable names match exactly (case-sensitive)
+    4. No quotes around values unless they contain spaces
+    5. Restart your development server after changes
+    
+    ```bash
+    # Correct
+    API_KEY=abc123
+    
+    # Incorrect
+    API_KEY="abc123"  # No quotes needed
+    ```
+  </Accordion>
+  
+  <Accordion title="Variables overwritten after module install">
+    This shouldn't happen - Devark preserves existing variables. If it does:
+    
+    1. Check if you have a backup: `.env.tmp`
+    2. Variables with empty values (`""`) might be skipped
+    3. File permissions might prevent proper read/write
+    
+    The merge logic at line 25-27 in `injectEnvVars.js` only sets values if they're truthy.
+  </Accordion>
+  
+  <Accordion title="Sample values instead of real credentials">
+    If you see placeholder values after installation:
+    
+    ```bash
+    GOOGLE_CLIENT_ID=your-client-id
+    GOOGLE_CLIENT_SECRET=your-client-secret
+    ```
+    
+    This means you left the prompts empty. Simply edit `.env` and replace with real values:
+    
+    ```bash
+    GOOGLE_CLIENT_ID=123456789.apps.googleusercontent.com
+    GOOGLE_CLIENT_SECRET=GOCSPX-abcdefghijklmnop
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Source Code Reference
+
+Devark's environment variable management is implemented in:
+- `src/utils/injectEnvVars.js` - Core injection logic with atomic writes
+- `src/modules/*/install.js` - Module-specific variable definitions (lines 193-199, 176-179)
+
+<Note>
+Every module's `install.js` calls `injectEnvVars(targetPath, envVars)` after prompting for credentials and before completing installation.
+</Note>

@@ -1,0 +1,417 @@
+---
+title: Module Structure
+description: Understanding Devark's modular architecture and how modules are structured
+---
+
+Devark uses a modular architecture where each feature is a self-contained, pluggable module. This design makes it easy to add new features, maintain existing ones, and ensure consistency across the codebase.
+
+## Overview
+
+Each module in Devark follows a consistent structure that includes:
+
+- **install.js** - The main installation script
+- **templates/** - EJS templates for JavaScript and TypeScript
+- **utils/** - Module-specific utility functions
+
+<Card title="Module Location" icon="folder">
+  All modules are located in `src/modules/` directory. Each module is self-contained with its own templates and utilities.
+</Card>
+
+## Module Directory Structure
+
+Here's the structure of a typical Devark module (using `google-oauth` as an example):
+
+```
+src/modules/google-oauth/
+├── install.js                    # Main installation script
+├── templates/
+│   ├── javascript/
+│   │   ├── config/
+│   │   │   └── googleStrategy.ejs
+│   │   └── routes/
+│   │       └── googleAuthRoutes.ejs
+│   └── typescript/
+│       ├── config/
+│       │   └── googleStrategy.ejs
+│       └── routes/
+│           └── googleAuthRoutes.ejs
+└── utils/
+    └── ensureAppJsHasOAuthSetup.js
+```
+
+## Core Components
+
+### 1. Installation Script (install.js)
+
+The `install.js` file is the entry point for each module. It handles:
+
+- User prompts for configuration
+- Dependency installation
+- Template rendering
+- File patching and setup
+
+**Example from google-oauth/install.js:**
+
+```javascript
+import { ensureDir, renderTemplate } from "../../utils/filePaths.js";
+import { installDepsWithChoice, detectPackageManager } from "../../utils/packageManager.js";
+import { injectEnvVars } from "../../utils/injectEnvVars.js";
+import { ensureAppJsHasGoogleOAuthSetup } from "./utils/ensureAppJsHasOAuthSetup.js";
+
+export default async function installGoogleOAuth(targetPath) {
+  intro("Google OAuth Module Setup");
+  
+  // Detect package manager
+  const packageManager = detectPackageManager(targetPath);
+  
+  // Language selection
+  const language = await select({
+    message: "Which version do you want to add?",
+    options: [
+      { label: "JavaScript", value: "JavaScript" },
+      { label: "TypeScript", value: "TypeScript" },
+    ],
+  });
+  
+  // Install dependencies
+  const runtimeDeps = [
+    "express",
+    "passport",
+    "passport-google-oauth20",
+    "express-session",
+    "dotenv",
+  ];
+  
+  await installDepsWithChoice(targetPath, runtimeDeps, packageManager, false);
+  
+  // Render templates
+  const templateDir = path.join(__dirname, "templates", language.toLowerCase());
+  renderTemplate(
+    path.join(templateDir, "config", "googleStrategy.ejs"),
+    path.join(configDir, `googleStrategy.${ext}`)
+  );
+  
+  outro("Google OAuth setup complete!");
+}
+```
+
+<Steps>
+  <Step title="Validate Project">
+    Check if the target directory is a valid Node.js project with `package.json`
+  </Step>
+  
+  <Step title="Gather Configuration">
+    Prompt user for language preference (JS/TS), entry file, and credentials
+  </Step>
+  
+  <Step title="Install Dependencies">
+    Install required npm packages using the detected package manager
+  </Step>
+  
+  <Step title="Render Templates">
+    Copy and render EJS templates to the target project
+  </Step>
+  
+  <Step title="Patch Files">
+    Modify existing files (like app.js) to integrate the new module
+  </Step>
+  
+  <Step title="Inject Environment Variables">
+    Add configuration to .env file
+  </Step>
+</Steps>
+
+### 2. Templates Directory
+
+Templates are organized by language (JavaScript/TypeScript) and use EJS for dynamic rendering.
+
+**Template Structure:**
+
+```
+templates/
+├── javascript/
+│   ├── config/          # Configuration files
+│   └── routes/          # Route handlers
+└── typescript/
+    ├── config/
+    └── routes/
+```
+
+**Example Template (googleStrategy.ejs):**
+
+```javascript
+import passport from 'passport'
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
+
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: '/auth/google/callback',
+}, (accessToken, refreshToken, profile, done) => {
+  // Replace this with DB logic
+  return done(null, profile)
+}))
+
+passport.serializeUser((user, done) => {
+  done(null, user)
+})
+
+passport.deserializeUser((user, done) => {
+  done(null, user)
+})
+```
+
+<Warning>
+  Template files must have the `.ejs` extension. They are rendered using the `renderTemplate()` utility which processes EJS syntax and writes the output to the target project.
+</Warning>
+
+### 3. Module Utilities
+
+Module-specific utilities handle complex operations like file patching and setup.
+
+**Example: File Patching Logic (ensureAppJsHasOAuthSetup.js)**
+
+```javascript
+export function ensureAppJsHasGoogleOAuthSetup(appPath, language = "JavaScript") {
+  let content = fs.readFileSync(appPath, "utf-8");
+  
+  const requiredImports = [
+    "import 'dotenv/config'",
+    "import session from 'express-session'",
+    "import passport from 'passport'",
+    "import googleAuthRoutes from './routes/googleAuthRoutes.js'",
+    "import './config/googleStrategy.js'",
+  ];
+  
+  const requiredMiddleware = [
+    `app.use(session({
+      secret: process.env.SESSION_SECRET || 'your-session-secret',
+      resave: false,
+      saveUninitialized: false,
+    }))`,
+    "app.use(passport.initialize())",
+    "app.use(passport.session())",
+    "app.use('/', googleAuthRoutes)",
+  ];
+  
+  // Remove old imports to avoid duplicates
+  let lines = content.split("\n");
+  const trimmedImports = requiredImports.map((imp) => imp.trim());
+  lines = lines.filter((line) => !trimmedImports.includes(line.trim()));
+  
+  // Add imports at the top
+  lines = [...requiredImports, "", ...lines];
+  
+  // Find app initialization
+  let appIndex = lines.findIndex((line) => /const\s+app\s*[:=]/.test(line));
+  
+  // Inject middleware after app initialization
+  lines.splice(appIndex + 1, 0, ...requiredMiddleware, "");
+  
+  fs.writeFileSync(appPath, lines.join("\n"), "utf-8");
+}
+```
+
+This approach ensures that:
+- Imports are not duplicated
+- Middleware is added in the correct order
+- Existing code is preserved
+
+## Shared Utilities
+
+Devark provides shared utilities in `src/utils/` that all modules can use:
+
+### filePaths.js
+
+Handles directory creation and template rendering:
+
+```javascript
+export function ensureDir(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true });
+}
+
+export function renderTemplate(srcPath, destPath, data = {}) {
+  const template = fs.readFileSync(srcPath, "utf-8");
+  const content = ejs.render(template, data);
+  const destDir = path.dirname(destPath);
+  if (destDir && !fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true });
+  }
+  fs.writeFileSync(destPath, content, "utf-8");
+}
+```
+
+### packageManager.js
+
+Detects and uses the appropriate package manager:
+
+```javascript
+export function detectPackageManager(targetPath) {
+  const lockFiles = {
+    pnpm: ["pnpm-lock.yaml"],
+    yarn: ["yarn.lock"],
+    npm: ["package-lock.json"],
+    bun: ["bun.lock", "bun.lockb"],
+  };
+
+  for (const [manager, files] of Object.entries(lockFiles)) {
+    if (files.some((file) => fs.existsSync(path.join(targetPath, file)))) {
+      return manager;
+    }
+  }
+  return null;
+}
+```
+
+### moduleUtils.js
+
+Provides logging utilities and common functions:
+
+```javascript
+export const log = {
+  info: (msg) => console.log(`\x1b[1m\x1b[32m${msg}\x1b[0m`),
+  success: (msg) => console.log(`\x1b[32m✔ ${msg}\x1b[0m`),
+  warn: (msg) => console.log(`\x1b[1m\x1b[31m${msg}\x1b[0m`),
+  error: (msg) => console.log(`\x1b[1m\x1b[31m${msg}\x1b[0m`),
+  detect: (msg) => console.log(`\x1b[1m\x1b[34m✔ ${msg}\x1b[0m`),
+};
+```
+
+### injectEnvVars.js
+
+Manages environment variable injection:
+
+```javascript
+export function injectEnvVars(targetPath, envVars) {
+  const envPath = path.join(targetPath, ".env");
+  let envContent = fs.existsSync(envPath) 
+    ? fs.readFileSync(envPath, "utf-8") 
+    : "";
+  
+  for (const [key, value] of Object.entries(envVars)) {
+    if (!envContent.includes(key)) {
+      envContent += `\n${key}=${value}`;
+    }
+  }
+  
+  fs.writeFileSync(envPath, envContent.trim() + "\n", "utf-8");
+}
+```
+
+## Module Integration Flow
+
+<Steps>
+  <Step title="User runs devark add <module>">
+    The CLI parses the command and routes to the appropriate module's install.js
+  </Step>
+  
+  <Step title="Module validates project">
+    Checks for package.json and detects package manager (npm, yarn, pnpm, bun)
+  </Step>
+  
+  <Step title="User provides configuration">
+    Interactive prompts gather language preference and credentials
+  </Step>
+  
+  <Step title="Dependencies are installed">
+    Module installs required packages using the detected package manager
+  </Step>
+  
+  <Step title="Templates are rendered">
+    EJS templates are processed and written to appropriate directories
+  </Step>
+  
+  <Step title="Files are patched">
+    Existing project files (like app.js) are modified to integrate the module
+  </Step>
+  
+  <Step title="Environment configured">
+    .env file is updated with necessary configuration variables
+  </Step>
+</Steps>
+
+## How Templates Are Rendered
+
+Devark uses EJS (Embedded JavaScript) for templating:
+
+1. **Template Selection**: Based on user's language choice (JS/TS)
+2. **EJS Processing**: `ejs.render()` processes the template with optional data
+3. **File Writing**: Rendered content is written to the target project
+
+**Example:**
+
+```javascript
+const templateDir = path.join(__dirname, "templates", "javascript");
+const configDir = path.join(targetPath, "config");
+
+renderTemplate(
+  path.join(templateDir, "config", "googleStrategy.ejs"),
+  path.join(configDir, "googleStrategy.js")
+);
+```
+
+<Card title="Why EJS?" icon="code">
+  EJS allows for dynamic template rendering with minimal syntax. While current templates are mostly static, EJS enables future customization based on user inputs.
+</Card>
+
+## Module Registration
+
+New modules must be registered in `src/bin/devark.js`:
+
+```javascript
+import googleAuth from '../modules/google-oauth/install.js';
+import addGithubOAuth from '../modules/github-oauth/install.js';
+
+program
+  .command('add <module>')
+  .action(async (module) => {
+    let input = module.toLowerCase().trim();
+    
+    switch (input) {
+      case 'google-oauth':
+        await googleAuth(process.cwd());
+        break;
+      
+      case 'github-oauth':
+        await addGithubOAuth(process.cwd());
+        break;
+      
+      default:
+        throw new Error(`Module "${module}" is not supported`);
+    }
+  });
+```
+
+## Best Practices
+
+<Card title="Keep Modules Self-Contained" icon="box">
+  Each module should include everything it needs: templates, utilities, and installation logic. Avoid cross-module dependencies.
+</Card>
+
+<Card title="Support Both JS and TS" icon="code">
+  Always provide both JavaScript and TypeScript templates to support all users.
+</Card>
+
+<Card title="Use Shared Utilities" icon="puzzle">
+  Leverage `src/utils/` for common operations to maintain consistency across modules.
+</Card>
+
+<Card title="Validate Before Modifying" icon="shield-check">
+  Always check if files exist and contain expected patterns before patching them.
+</Card>
+
+<Card title="Idempotent Operations" icon="repeat">
+  Ensure modules can be run multiple times without breaking. Check for existing imports/middleware before adding them.
+</Card>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Contributing" icon="code-pull-request" href="/advanced/contributing">
+    Learn how to create your own modules
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/advanced/troubleshooting">
+    Common issues and solutions
+  </Card>
+</CardGroup>

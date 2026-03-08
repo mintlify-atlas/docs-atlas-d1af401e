@@ -1,0 +1,558 @@
+---
+title: Contributing Guide
+description: How to contribute to Devark by creating modules, fixing bugs, and improving the codebase
+---
+
+We welcome contributions to Devark! Whether you're adding new modules, fixing bugs, or improving documentation, your help is appreciated.
+
+## Quick Start
+
+<Steps>
+  <Step title="Fork and Clone">
+    Fork the repository on GitHub and clone it locally:
+    
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/Devark.git
+    cd Devark
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    Devark uses pnpm for dependency management:
+    
+    ```bash
+    pnpm install
+    ```
+  </Step>
+  
+  <Step title="Link Globally">
+    Link the CLI globally for local testing:
+    
+    ```bash
+    pnpm link --global
+    ```
+    
+    Now you can use `devark` anywhere on your system to test your changes.
+  </Step>
+  
+  <Step title="Make Your Changes">
+    Create a new branch and start coding:
+    
+    ```bash
+    git checkout -b feature/my-new-module
+    ```
+  </Step>
+</Steps>
+
+## Development Environment
+
+### Prerequisites
+
+- **Node.js** 16+ (18+ recommended)
+- **pnpm** (preferred package manager)
+- Basic understanding of Node.js and Express.js
+- Familiarity with OAuth or authentication concepts (for auth modules)
+
+### Project Structure
+
+```
+Devark/
+├── src/
+│   ├── bin/
+│   │   └── devark.js              # CLI entry point
+│   ├── modules/                    # Feature modules
+│   │   ├── google-oauth/
+│   │   ├── github-oauth/
+│   │   ├── resend-otp/
+│   │   └── ...
+│   └── utils/                      # Shared utilities
+│       ├── filePaths.js
+│       ├── packageManager.js
+│       ├── moduleUtils.js
+│       └── ...
+├── package.json
+├── README.md
+└── LICENSE
+```
+
+## Creating a New Module
+
+Follow this step-by-step guide to create a new module:
+
+<Steps>
+  <Step title="Create Module Directory">
+    Create a new directory under `src/modules/`:
+    
+    ```bash
+    mkdir -p src/modules/your-module
+    cd src/modules/your-module
+    ```
+  </Step>
+  
+  <Step title="Create Directory Structure">
+    Set up the required subdirectories:
+    
+    ```bash
+    mkdir -p templates/javascript/config
+    mkdir -p templates/javascript/routes
+    mkdir -p templates/typescript/config
+    mkdir -p templates/typescript/routes
+    mkdir utils
+    ```
+  </Step>
+  
+  <Step title="Create install.js">
+    Create the main installation script `install.js`:
+    
+    ```javascript
+    import fs from "fs";
+    import path from "path";
+    import { fileURLToPath } from "url";
+    import { select, text, intro, outro, spinner } from "@clack/prompts";
+    import { ensureDir, renderTemplate } from "../../utils/filePaths.js";
+    import { installDepsWithChoice, detectPackageManager } from "../../utils/packageManager.js";
+    import { injectEnvVars } from "../../utils/injectEnvVars.js";
+    import { log } from "../../utils/moduleUtils.js";
+    import { ensureNodeProject } from "../../utils/validProject.js";
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
+    export default async function installYourModule(targetPath) {
+      intro("Your Module Setup");
+
+      // Validate project
+      const { success, pkgManager } = await ensureNodeProject(targetPath);
+      if (!success) {
+        outro("Aborted: Not a valid project.");
+        return;
+      }
+
+      log.info("Installing Your Module...");
+
+      // Detect package manager
+      const packageManager = pkgManager || detectPackageManager(targetPath);
+      if (packageManager) log.detect(`${packageManager} detected`);
+
+      // Language selection
+      const language = await select({
+        message: "Which version do you want to add?",
+        options: [
+          { label: "JavaScript", value: "JavaScript" },
+          { label: "TypeScript", value: "TypeScript" },
+        ],
+        initialValue: "JavaScript",
+      });
+
+      // Entry file prompt
+      const defaultEntry = language === "TypeScript" ? "src/app.ts" : "app.js";
+      const entryFile = await text({
+        message: "Enter your project entry file:",
+        placeholder: defaultEntry,
+        initialValue: defaultEntry,
+      });
+
+      const appPath = path.join(targetPath, entryFile);
+      if (!fs.existsSync(appPath)) {
+        log.error(`Entry file "${entryFile}" not found.`);
+        outro("Please create the entry file and run again.");
+        return;
+      }
+
+      // Gather credentials/config
+      const apiKey = await text({
+        message: "Enter your API key (optional):",
+        placeholder: "your-api-key",
+      });
+
+      // Install dependencies
+      const runtimeDeps = ["express", "dotenv"];
+      const devDeps = language === "TypeScript" 
+        ? ["typescript", "ts-node", "@types/node", "@types/express"]
+        : [];
+
+      const spin = spinner();
+      spin.start("Installing dependencies...");
+
+      try {
+        await installDepsWithChoice(targetPath, runtimeDeps, packageManager, false);
+        if (devDeps.length > 0) {
+          await installDepsWithChoice(targetPath, devDeps, packageManager, true);
+        }
+        spin.stop("Dependencies installed successfully.");
+      } catch (err) {
+        spin.stop("Failed to install dependencies.");
+        log.error(err.message);
+        return;
+      }
+
+      // Render templates
+      const baseDir = language === "TypeScript" 
+        ? path.join(targetPath, "src") 
+        : targetPath;
+      const configDir = path.join(baseDir, "config");
+      const routesDir = path.join(baseDir, "routes");
+
+      ensureDir(configDir);
+      ensureDir(routesDir);
+
+      const templateDir = path.join(__dirname, "templates", language.toLowerCase());
+      const ext = language === "TypeScript" ? "ts" : "js";
+
+      renderTemplate(
+        path.join(templateDir, "config", "config.ejs"),
+        path.join(configDir, `yourModule.${ext}`)
+      );
+
+      renderTemplate(
+        path.join(templateDir, "routes", "routes.ejs"),
+        path.join(routesDir, `yourModuleRoutes.${ext}`)
+      );
+
+      // Inject environment variables
+      const envVars = {
+        YOUR_API_KEY: apiKey || "your-api-key",
+      };
+      injectEnvVars(targetPath, envVars);
+
+      log.detect(".env updated with your configuration");
+      outro("Your Module setup complete!");
+    }
+    ```
+  </Step>
+  
+  <Step title="Create Templates">
+    Create EJS templates for both JavaScript and TypeScript.
+    
+    **templates/javascript/config/config.ejs:**
+    ```javascript
+    export const config = {
+      apiKey: process.env.YOUR_API_KEY,
+      // Add more configuration
+    };
+    ```
+    
+    **templates/javascript/routes/routes.ejs:**
+    ```javascript
+    import express from "express";
+    const router = express.Router();
+
+    router.get("/your-route", (req, res) => {
+      res.json({ message: "Your module works!" });
+    });
+
+    export default router;
+    ```
+    
+    Repeat for TypeScript with proper type annotations.
+  </Step>
+  
+  <Step title="Register Module">
+    Add your module to `src/bin/devark.js`:
+    
+    ```javascript
+    import yourModule from '../modules/your-module/install.js';
+
+    // Inside the switch statement
+    case 'your-module':
+      await yourModule(process.cwd());
+      break;
+    ```
+  </Step>
+  
+  <Step title="Test Locally">
+    Test your module in a sample project:
+    
+    ```bash
+    # Create a test project
+    mkdir ~/test-devark
+    cd ~/test-devark
+    npm init -y
+    
+    # Test your module
+    devark add your-module
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Always test your module with both JavaScript and TypeScript projects before submitting a PR.
+</Warning>
+
+## Code Standards
+
+Devark uses ESLint and Prettier for code quality and formatting.
+
+### Linting
+
+Run ESLint to check for code issues:
+
+```bash
+pnpm run lint
+```
+
+### Code Style
+
+The project uses these tools (configured in `package.json`):
+
+- **ESLint** - Code quality and error detection
+- **Prettier** - Code formatting
+- **Husky** - Git hooks for pre-commit checks
+- **lint-staged** - Run linters on staged files
+
+### Pre-commit Hooks
+
+The project automatically runs ESLint on staged `.js` files before each commit:
+
+```json
+"lint-staged": {
+  "*.js": "eslint --fix"
+}
+```
+
+<Card title="Automatic Formatting" icon="wand-magic-sparkles">
+  ESLint will automatically fix many issues when you commit. Make sure to stage the fixed files before pushing.
+</Card>
+
+## Module Development Checklist
+
+Before submitting your module, ensure:
+
+- [ ] Module works with both JavaScript and TypeScript
+- [ ] All four package managers are supported (npm, yarn, pnpm, bun)
+- [ ] Module can be run multiple times without errors (idempotent)
+- [ ] Environment variables are properly injected
+- [ ] Dependencies are correctly specified
+- [ ] Templates are properly formatted
+- [ ] Error handling is in place
+- [ ] User prompts are clear and helpful
+- [ ] Module is registered in `devark.js`
+- [ ] Code passes ESLint checks
+
+## Testing Your Module
+
+<Accordion title="Test with Different Package Managers">
+  Create test projects with different package managers:
+  
+  ```bash
+  # NPM
+  mkdir test-npm && cd test-npm
+  npm init -y
+  devark add your-module
+  
+  # Yarn
+  mkdir test-yarn && cd test-yarn
+  yarn init -y
+  devark add your-module
+  
+  # PNPM
+  mkdir test-pnpm && cd test-pnpm
+  pnpm init
+  devark add your-module
+  
+  # Bun
+  mkdir test-bun && cd test-bun
+  bun init
+  devark add your-module
+  ```
+</Accordion>
+
+<Accordion title="Test with JavaScript">
+  Create a JavaScript project and test:
+  
+  ```bash
+  mkdir test-js && cd test-js
+  npm init -y
+  touch app.js
+  devark add your-module
+  node app.js
+  ```
+</Accordion>
+
+<Accordion title="Test with TypeScript">
+  Create a TypeScript project and test:
+  
+  ```bash
+  mkdir test-ts && cd test-ts
+  npm init -y
+  npm install -D typescript ts-node @types/node
+  mkdir src && touch src/app.ts
+  devark add your-module
+  npx ts-node src/app.ts
+  ```
+</Accordion>
+
+<Accordion title="Test Idempotency">
+  Run your module multiple times in the same project:
+  
+  ```bash
+  devark add your-module
+  devark add your-module  # Should not break or duplicate code
+  ```
+</Accordion>
+
+## Pull Request Process
+
+<Steps>
+  <Step title="Create Feature Branch">
+    Always work on a feature branch:
+    
+    ```bash
+    git checkout -b feature/stripe-payment
+    ```
+    
+    Use descriptive branch names:
+    - `feature/new-module-name`
+    - `fix/bug-description`
+    - `docs/update-readme`
+  </Step>
+  
+  <Step title="Make Your Changes">
+    Commit your changes with clear messages:
+    
+    ```bash
+    git add .
+    git commit -m "feat: add Stripe payment module"
+    ```
+    
+    Follow conventional commit format:
+    - `feat:` - New feature
+    - `fix:` - Bug fix
+    - `docs:` - Documentation changes
+    - `refactor:` - Code refactoring
+    - `test:` - Adding tests
+  </Step>
+  
+  <Step title="Push to GitHub">
+    Push your branch to your fork:
+    
+    ```bash
+    git push origin feature/stripe-payment
+    ```
+  </Step>
+  
+  <Step title="Open Pull Request">
+    Go to GitHub and open a pull request with:
+    
+    - **Clear title**: "feat: Add Stripe payment module"
+    - **Description**: What does this PR do?
+    - **Testing**: How did you test it?
+    - **Screenshots**: If applicable
+  </Step>
+  
+  <Step title="Code Review">
+    Respond to feedback and make requested changes:
+    
+    ```bash
+    # Make changes
+    git add .
+    git commit -m "fix: address review comments"
+    git push
+    ```
+  </Step>
+</Steps>
+
+## Pull Request Template
+
+```markdown
+## Description
+Adds a new Stripe payment module that allows users to integrate Stripe payments quickly.
+
+## Type of Change
+- [x] New module
+- [ ] Bug fix
+- [ ] Documentation update
+- [ ] Refactor
+
+## Testing
+- [x] Tested with JavaScript
+- [x] Tested with TypeScript
+- [x] Tested with npm, yarn, pnpm, bun
+- [x] Module can be run multiple times without errors
+
+## Checklist
+- [x] Code follows project style guidelines
+- [x] ESLint passes without errors
+- [x] Templates are properly formatted
+- [x] Module is registered in devark.js
+- [x] README updated if necessary
+
+## Screenshots
+[If applicable, add screenshots of CLI output]
+```
+
+## Community Guidelines
+
+<Card title="Be Respectful" icon="heart">
+  Treat all contributors with respect. We're all here to learn and improve Devark together.
+</Card>
+
+<Card title="Ask Questions" icon="messages">
+  If you're unsure about something, ask! Open an issue or discussion on GitHub.
+</Card>
+
+<Card title="Start Small" icon="seedling">
+  If you're new to contributing, start with small fixes or improvements to existing modules.
+</Card>
+
+<Card title="Document Your Code" icon="book">
+  Add comments to complex logic and update documentation when adding new features.
+</Card>
+
+## Getting Help
+
+If you need help with your contribution:
+
+- **GitHub Issues**: [https://github.com/huzfm/Devark/issues](https://github.com/huzfm/Devark/issues)
+- **GitHub Discussions**: For general questions and ideas
+- **Email**: Contact the maintainer directly
+
+## What to Contribute
+
+### Module Ideas
+
+- **Authentication**: Auth0, Firebase Auth, Clerk
+- **Payments**: Stripe, PayPal, Razorpay
+- **Storage**: AWS S3, Cloudinary, Firebase Storage
+- **Email**: SendGrid, Mailgun, Postmark
+- **Database**: MongoDB, PostgreSQL, MySQL templates
+- **API Integrations**: Twilio, Slack, Discord
+
+### Other Contributions
+
+- **Bug Fixes**: Found a bug? Submit a fix!
+- **Documentation**: Improve README, add examples
+- **Tests**: Add test coverage
+- **Performance**: Optimize existing code
+- **Error Handling**: Improve error messages
+
+<Warning>
+  Before starting work on a major feature, open an issue to discuss it with maintainers. This ensures your work aligns with the project's direction.
+</Warning>
+
+## Release Process
+
+Maintainers will:
+
+1. Review and merge PRs
+2. Update version in `package.json`
+3. Create a GitHub release
+4. Publish to npm
+
+## License
+
+By contributing to Devark, you agree that your contributions will be licensed under the ISC License.
+
+## Thank You!
+
+Your contributions make Devark better for everyone. Thank you for taking the time to contribute!
+
+<CardGroup cols={2}>
+  <Card title="Module Structure" icon="sitemap" href="/advanced/module-structure">
+    Learn about module architecture
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/advanced/troubleshooting">
+    Common development issues
+  </Card>
+</CardGroup>

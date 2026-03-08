@@ -1,0 +1,446 @@
+---
+title: 'Google OAuth Module'
+description: 'Add Google OAuth authentication to your Node.js project with automatic setup and configuration'
+icon: 'google'
+---
+
+## Overview
+
+The Google OAuth module integrates Google authentication into your existing Node.js Express application using Passport.js. The module automatically:
+
+- Installs all required dependencies
+- Generates configuration and route files
+- Patches your main app file intelligently
+- Injects environment variables to `.env`
+- Supports both JavaScript and TypeScript
+
+## Installation
+
+Run the following command in your project directory:
+
+```bash
+npx devark add google-oauth
+```
+
+## Interactive Setup
+
+The CLI will guide you through an interactive setup process with the following prompts:
+
+<Steps>
+  <Step title="Select Language">
+    Choose between JavaScript or TypeScript implementation
+    
+    ```
+    ? Which version do you want to add for this module?
+    › JavaScript
+      TypeScript
+    ```
+  </Step>
+
+  <Step title="Specify Entry File">
+    Enter your project's main entry file (relative to root)
+    
+    ```
+    ? Enter your project entry file (relative to root):
+    › app.js (for JavaScript)
+    › src/app.ts (for TypeScript)
+    ```
+    
+    <Note>
+      For TypeScript projects, if the file doesn't exist, Devark will auto-detect `.ts` files in your `src/` directory.
+    </Note>
+  </Step>
+
+  <Step title="Google Client ID">
+    Enter your Google OAuth Client ID (or leave empty for sample values)
+    
+    ```
+    ? Enter your Google Client ID (leave empty for sample):
+    › your-client-id
+    ```
+  </Step>
+
+  <Step title="Google Client Secret">
+    Enter your Google OAuth Client Secret (or leave empty for sample values)
+    
+    ```
+    ? Enter your Google Client Secret (leave empty for sample):
+    › your-client-secret
+    ```
+  </Step>
+
+  <Step title="Callback URL">
+    Enter your OAuth callback URL
+    
+    ```
+    ? Enter your Google Callback URL:
+    › http://localhost:3000/auth/google/callback
+    ```
+  </Step>
+
+  <Step title="Session Secret">
+    Enter a secret key for session management
+    
+    ```
+    ? Enter your session secret (leave empty for sample):
+    › your-session-secret
+    ```
+  </Step>
+</Steps>
+
+## Dependencies Installed
+
+The module automatically installs the following packages:
+
+### Runtime Dependencies
+```bash
+express
+passport
+passport-google-oauth20
+express-session
+dotenv
+```
+
+### TypeScript Dev Dependencies (TypeScript only)
+```bash
+typescript
+ts-node
+@types/node
+@types/express
+@types/express-session
+@types/passport
+@types/passport-google-oauth20
+```
+
+## Generated File Structure
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```
+    your-project/
+    ├── config/
+    │   └── googleStrategy.js    # Passport strategy configuration
+    ├── routes/
+    │   └── googleAuthRoutes.js  # OAuth routes
+    ├── app.js                    # Patched with OAuth setup
+    └── .env                      # Environment variables
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```
+    your-project/
+    ├── src/
+    │   ├── config/
+    │   │   └── googleStrategy.ts    # Passport strategy configuration
+    │   ├── routes/
+    │   │   └── googleAuthRoutes.ts  # OAuth routes
+    │   └── app.ts                    # Patched with OAuth setup
+    └── .env                          # Environment variables
+    ```
+  </Tab>
+</Tabs>
+
+## Configuration
+
+The following environment variables are automatically added to your `.env` file:
+
+<ParamField path="GOOGLE_CLIENT_ID" type="string" required>
+  Your Google OAuth 2.0 Client ID from Google Cloud Console
+</ParamField>
+
+<ParamField path="GOOGLE_CLIENT_SECRET" type="string" required>
+  Your Google OAuth 2.0 Client Secret from Google Cloud Console
+</ParamField>
+
+<ParamField path="GOOGLE_CALLBACK_URL" type="string" default="http://localhost:3000/auth/google/callback">
+  The callback URL where Google redirects after authentication
+</ParamField>
+
+<ParamField path="SESSION_SECRET" type="string" required>
+  Secret key used to sign the session ID cookie
+</ParamField>
+
+### Example .env
+```bash
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+SESSION_SECRET=your-session-secret
+```
+
+## Generated Code
+
+### Strategy Configuration
+
+<Tabs>
+  <Tab title="JavaScript">
+    The module generates `config/googleStrategy.js`:
+    
+    ```javascript
+    import passport from 'passport'
+    import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
+
+    passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: '/auth/google/callback',
+    }, (accessToken, refreshToken, profile, done) => {
+      // Replace this with DB logic
+      return done(null, profile)
+    }))
+
+    passport.serializeUser((user, done) => {
+      done(null, user)
+    })
+
+    passport.deserializeUser((user, done) => {
+      done(null, user)
+    })
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    The module generates `src/config/googleStrategy.ts`:
+    
+    ```typescript
+    import passport from "passport";
+    import { Strategy as GoogleStrategy, Profile as GoogleProfile } from "passport-google-oauth20";
+    import dotenv from "dotenv";
+
+    dotenv.config();
+
+    export interface IUser {
+      id: string;
+      displayName: string;
+      emails?: { value: string }[];
+      photos?: { value: string }[];
+    }
+
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID!,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/auth/google/callback",
+        },
+        async (
+          accessToken: string,
+          refreshToken: string,
+          profile: GoogleProfile,
+          done: (err: any, user?: Express.User) => void
+        ) => {
+          try {
+            const user: IUser = {
+              id: profile.id,
+              displayName: profile.displayName,
+              emails: profile.emails,
+              photos: profile.photos,
+            };
+            return done(null, user);
+          } catch (err) {
+            return done(err as Error);
+          }
+        }
+      )
+    );
+
+    passport.serializeUser((user: Express.User, done) => {
+      done(null, user);
+    });
+
+    passport.deserializeUser((user: Express.User, done) => {
+      done(null, user);
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### Authentication Routes
+
+<Tabs>
+  <Tab title="JavaScript">
+    The module generates `routes/googleAuthRoutes.js`:
+    
+    ```javascript
+    import express from "express";
+    import passport from "passport";
+
+    const router = express.Router();
+
+    // Step 1: Start Google login
+    router.get(
+      "/auth/google",
+      passport.authenticate("google", { scope: ["profile", "email"] })
+    );
+
+    // Step 2: Google OAuth callback
+    router.get(
+      "/auth/google/callback",
+      passport.authenticate("google", {
+        failureRedirect: "/auth/failure",
+        successRedirect: "/success",
+      })
+    );
+
+    // Step 3: Success page
+    router.get("/success", (req, res) => {
+      const user = req.user;
+      
+      if (user) {
+        res.send(`
+          <h1>✅ Logged In Successfully</h1>
+          <p>Welcome, ${user.displayName}!</p>
+          <p>Email: ${user.emails?.[0]?.value || "N/A"}</p>
+          <p><a href="/">Go back home</a></p>
+        `);
+      } else {
+        res.send(`
+          <h1>Login Failed</h1>
+          <p>No user data found.</p>
+          <p><a href="/">Try again</a></p>
+        `);
+      }
+    });
+
+    // Step 4: Failure route
+    router.get("/auth/failure", (req, res) => {
+      res.send("Failed to authenticate..");
+    });
+
+    export default router;
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    Similar structure with TypeScript types for request and response objects.
+  </Tab>
+</Tabs>
+
+## Usage Example
+
+After installation, your app will automatically have Google OAuth configured. To test:
+
+<Steps>
+  <Step title="Start Your Server">
+    ```bash
+    npm start
+    ```
+  </Step>
+
+  <Step title="Navigate to Login">
+    Open your browser and visit:
+    ```
+    http://localhost:3000/auth/google
+    ```
+  </Step>
+
+  <Step title="Authenticate">
+    You'll be redirected to Google's login page. After successful authentication, you'll be redirected back to `/success`.
+  </Step>
+</Steps>
+
+### Available Routes
+
+- `GET /auth/google` - Initiates Google OAuth flow
+- `GET /auth/google/callback` - Handles Google's redirect after authentication
+- `GET /success` - Success page displaying user information
+- `GET /auth/failure` - Failure page for authentication errors
+
+## App.js Patching
+
+The module intelligently patches your main app file to include:
+
+1. **Required imports** for passport and session management
+2. **Session middleware** configuration (placed before passport initialization)
+3. **Passport initialization** middleware
+4. **Route registration** for Google OAuth routes
+
+<Note>
+  The patching logic ensures no duplicate imports or middleware declarations. It detects existing setup and only adds what's missing.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Error: Entry file not found">
+    **Solution:** Ensure your `app.js` or `src/app.ts` file exists before running the module installation. Create the file if it doesn't exist:
+    
+    ```bash
+    touch app.js  # for JavaScript
+    mkdir -p src && touch src/app.ts  # for TypeScript
+    ```
+  </Accordion>
+
+  <Accordion title="Error: Redirect URI mismatch">
+    **Solution:** Ensure the callback URL in your Google Cloud Console matches the `GOOGLE_CALLBACK_URL` in your `.env` file.
+    
+    1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+    2. Navigate to APIs & Services → Credentials
+    3. Edit your OAuth 2.0 Client ID
+    4. Add `http://localhost:3000/auth/google/callback` to Authorized redirect URIs
+  </Accordion>
+
+  <Accordion title="Session is not persisting">
+    **Solution:** Ensure you have a strong `SESSION_SECRET` in your `.env` file and that `express-session` is configured before passport initialization.
+    
+    The module handles this automatically, but if you're manually configuring, ensure this order:
+    ```javascript
+    app.use(session({ secret: process.env.SESSION_SECRET }))
+    app.use(passport.initialize())
+    app.use(passport.session())
+    ```
+  </Accordion>
+
+  <Accordion title="TypeScript errors after installation">
+    **Solution:** The module installs TypeScript types automatically. If you still see errors:
+    
+    ```bash
+    npm install --save-dev @types/express @types/passport @types/passport-google-oauth20
+    ```
+  </Accordion>
+
+  <Accordion title="Cannot find module errors">
+    **Solution:** If dependencies weren't installed properly, manually install them:
+    
+    ```bash
+    npm install express passport passport-google-oauth20 express-session dotenv
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Getting Google OAuth Credentials
+
+<Steps>
+  <Step title="Create a Google Cloud Project">
+    Visit [Google Cloud Console](https://console.cloud.google.com/) and create a new project.
+  </Step>
+
+  <Step title="Enable Google+ API">
+    Navigate to **APIs & Services** → **Library** and enable the Google+ API.
+  </Step>
+
+  <Step title="Create OAuth Credentials">
+    Go to **APIs & Services** → **Credentials** → **Create Credentials** → **OAuth client ID**
+  </Step>
+
+  <Step title="Configure OAuth Consent Screen">
+    Fill in the required information for your OAuth consent screen.
+  </Step>
+
+  <Step title="Set Authorized Redirect URIs">
+    Add your callback URL (e.g., `http://localhost:3000/auth/google/callback`) to the authorized redirect URIs.
+  </Step>
+
+  <Step title="Copy Credentials">
+    Copy the Client ID and Client Secret and add them to your `.env` file.
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="GitHub OAuth" icon="github" href="/modules/github-oauth">
+    Add GitHub authentication to your project
+  </Card>
+  <Card title="Resend OTP" icon="envelope" href="/modules/resend-otp">
+    Add email OTP verification
+  </Card>
+</CardGroup>

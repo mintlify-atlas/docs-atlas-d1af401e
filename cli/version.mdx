@@ -1,0 +1,134 @@
+---
+title: 'devark --version'
+description: 'Display the installed Devark CLI version'
+---
+
+## Overview
+
+The `--version` flag displays the currently installed version of the Devark CLI.
+
+## Syntax
+
+```bash
+devark --version
+```
+
+## Example Output
+
+```bash
+$ devark --version
+1.0.0
+```
+
+<Note>
+  The version number follows [Semantic Versioning](https://semver.org/) (SemVer) with the format `MAJOR.MINOR.PATCH`.
+</Note>
+
+## Usage
+
+### Check Current Version
+
+```bash
+devark --version
+```
+
+This command:
+- Displays only the version number
+- Does not show the Devark logo (unlike other commands)
+- Exits immediately after displaying the version
+
+### Verify Installation
+
+Use this command to verify that Devark is properly installed:
+
+```bash
+$ devark --version
+1.0.0
+```
+
+If you see a version number, Devark is correctly installed and available in your PATH.
+
+## Checking for Updates
+
+<Tabs>
+  <Tab title="npm">
+    Check if a newer version is available:
+    
+    ```bash
+    npm outdated devark
+    ```
+    
+    Update to the latest version:
+    
+    ```bash
+    npm install -g devark@latest
+    ```
+  </Tab>
+  
+  <Tab title="yarn">
+    Update to the latest version:
+    
+    ```bash
+    yarn global upgrade devark
+    ```
+  </Tab>
+  
+  <Tab title="pnpm">
+    Check for updates:
+    
+    ```bash
+    pnpm outdated -g devark
+    ```
+    
+    Update to the latest version:
+    
+    ```bash
+    pnpm update -g devark
+    ```
+  </Tab>
+</Tabs>
+
+## Version Information
+
+### Where Version is Stored
+
+The version number is read from the `package.json` file in the Devark CLI installation directory. This ensures the displayed version always matches the installed package version.
+
+### Version History
+
+For a complete changelog and release notes, visit the [Devark GitHub Releases](https://github.com/devark/devark/releases) page.
+
+## Troubleshooting
+
+### Command Not Found
+
+If you see `command not found: devark`:
+
+```bash
+$ devark --version
+command not found: devark
+```
+
+Devark is not installed or not in your PATH. Install it globally:
+
+```bash
+npm install -g devark
+```
+
+### Permission Errors
+
+If you encounter permission errors during installation:
+
+<CodeGroup>
+```bash npm with sudo (Linux/Mac)
+sudo npm install -g devark
+```
+
+```bash Using npx (No installation)
+npx devark --version
+```
+</CodeGroup>
+
+## Related Commands
+
+- [devark add](/cli/add) - Add backend modules to your project

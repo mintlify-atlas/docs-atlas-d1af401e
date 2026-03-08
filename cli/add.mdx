@@ -1,0 +1,209 @@
+---
+title: 'devark add'
+description: 'Add backend modules to your project'
+---
+
+## Overview
+
+The `devark add` command adds pre-built backend modules to your project, scaffolding authentication, database templates, and other common features.
+
+## Syntax
+
+```bash
+devark add <module>
+```
+
+<ParamField path="module" type="string" required>
+  The module to add to your project. See available modules below.
+</ParamField>
+
+## Available Modules
+
+### Authentication Modules
+
+#### google-oauth
+Adds Google OAuth authentication to your project.
+
+```bash
+devark add google-oauth
+```
+
+#### github-oauth
+Adds GitHub OAuth authentication to your project.
+
+```bash
+devark add github-oauth
+```
+
+#### resend-otp
+Adds OTP (One-Time Password) authentication using Resend.
+
+```bash
+devark add resend-otp
+```
+
+#### oauth (Interactive)
+Triggers an interactive prompt to select an OAuth provider.
+
+```bash
+devark add oauth
+```
+
+When you run this command, you'll see:
+
+```bash
+? Select an OAuth provider to authenticate with:
+  > Google
+    GitHub
+```
+
+Use arrow keys to navigate and press Enter to select.
+
+### Database Templates
+
+#### node-mongo
+Adds a Node.js project template with MongoDB integration.
+
+```bash
+devark add node-mongo
+```
+
+#### node-postgres
+Adds a Node.js project template with PostgreSQL integration.
+
+```bash
+devark add node-postgres
+```
+
+## Examples
+
+<CodeGroup>
+```bash Adding Google OAuth
+$ devark add google-oauth
+
+✓ Google OAuth module added successfully
+```
+
+```bash Interactive OAuth Selection
+$ devark add oauth
+
+? Select an OAuth provider to authenticate with:
+  > Google
+    GitHub
+
+✓ Google OAuth module added successfully
+```
+
+```bash Adding MongoDB Template
+$ devark add node-mongo
+
+✓ Node.js MongoDB template added successfully
+```
+</CodeGroup>
+
+## Module Input
+
+<Note>
+  Module names are **case-insensitive** and whitespace is automatically trimmed.
+  
+  For example, `GOOGLE-OAUTH`, `google-oauth`, and ` google-oauth ` all work the same way.
+</Note>
+
+## Error Handling
+
+### Unsupported Module
+
+If you specify a module that doesn't exist:
+
+```bash
+$ devark add invalid-module
+Error: Module "invalid-module" is not supported
+```
+
+### Installation Aborted
+
+You can cancel installation at any time by pressing `Ctrl+C`:
+
+```bash
+$ devark add oauth
+? Select an OAuth provider to authenticate with:
+  > Google
+    GitHub
+^C
+  Installation aborted.
+```
+
+### Interactive Prompt Cancelled
+
+If you cancel an interactive prompt (like the OAuth selector), the installation will abort:
+
+```bash
+$ devark add oauth
+? Select an OAuth provider to authenticate with:
+  [Cancelled]
+
+  Installation aborted.
+```
+
+## Common Workflows
+
+<Tabs>
+  <Tab title="Adding Authentication">
+    ```bash
+    # Add Google OAuth
+    devark add google-oauth
+    
+    # Or use the interactive selector
+    devark add oauth
+    ```
+    
+    The module will scaffold all necessary files for OAuth authentication including:
+    - Route handlers
+    - Environment variable templates
+    - Configuration files
+  </Tab>
+  
+  <Tab title="Setting Up a Database">
+    ```bash
+    # For MongoDB projects
+    devark add node-mongo
+    
+    # For PostgreSQL projects
+    devark add node-postgres
+    ```
+    
+    These templates include:
+    - Database connection setup
+    - Sample models/schemas
+    - Environment configuration
+  </Tab>
+  
+  <Tab title="Adding OTP Authentication">
+    ```bash
+    devark add resend-otp
+    ```
+    
+    This module adds:
+    - OTP generation and verification
+    - Email sending via Resend
+    - Route handlers for OTP flows
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+After adding a module:
+
+1. Check the generated files in your project
+2. Update environment variables (usually in `.env`)
+3. Review the module-specific configuration
+4. Test the functionality
+
+<Note>
+  Most modules require additional configuration like API keys or database connection strings.
+  Check your `.env` file or generated documentation for required values.
+</Note>
+
+## Related Commands
+
+- [devark --version](/cli/version) - Check your Devark CLI version

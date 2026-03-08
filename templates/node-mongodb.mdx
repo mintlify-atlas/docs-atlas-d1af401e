@@ -1,0 +1,577 @@
+---
+title: Node + MongoDB Template
+description: Create a full-stack Node.js backend with MongoDB and Mongoose
+---
+
+The Node + MongoDB template scaffolds a complete backend application with Express server, MongoDB database integration using Mongoose, and example CRUD operations.
+
+## What Gets Generated
+
+This template creates a production-ready Node.js application with:
+
+- Express server with security middleware (Helmet, CORS)
+- MongoDB integration using Mongoose ODM
+- MVC architecture with models, routes, and controllers
+- Example User model with full CRUD operations
+- Development tooling (nodemon, morgan logger)
+- Environment configuration
+- TypeScript or JavaScript variants
+
+## Create a New Project
+
+<Steps>
+  <Step title="Run the template command">
+    ```bash
+    devark template node-mongodb my-app
+    ```
+    
+    Or use the shorthand:
+    ```bash
+    devark t node-mongodb my-app
+    ```
+  </Step>
+
+  <Step title="Choose your language">
+    The CLI will prompt you to select JavaScript or TypeScript:
+    
+    ```
+    ? Which language do you want to use?
+    > JavaScript
+      TypeScript
+    ```
+  </Step>
+
+  <Step title="Wait for installation">
+    Devark will:
+    - Create the project structure
+    - Generate all template files
+    - Install dependencies automatically
+    - Configure development tools
+  </Step>
+</Steps>
+
+## Project Structure
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```
+    my-app/
+    ├── controllers/
+    │   └── userController.js    # User CRUD operations
+    ├── models/
+    │   └── userModel.js         # Mongoose User schema
+    ├── routes/
+    │   └── userRoutes.js        # User API endpoints
+    ├── app.js                   # Express server entry point
+    ├── .env.example             # Environment variables template
+    ├── .gitignore              # Git ignore rules
+    ├── package.json            # Project dependencies
+    └── Instructions.md         # Setup instructions
+    ```
+  </Tab>
+  
+  <Tab title="TypeScript">
+    ```
+    my-app/
+    ├── src/
+    │   ├── controllers/
+    │   │   └── userController.ts
+    │   ├── models/
+    │   │   └── userModel.ts
+    │   ├── routes/
+    │   │   └── userRoutes.ts
+    │   └── app.ts
+    ├── .env.example
+    ├── .gitignore
+    ├── package.json
+    ├── tsconfig.json
+    └── Instructions.md
+    ```
+  </Tab>
+</Tabs>
+
+## Generated Files
+
+### Express Server (app.js/app.ts)
+
+The main application file configures Express with middleware and MongoDB connection:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```javascript
+    import express from "express";
+    import mongoose from "mongoose";
+    import morgan from "morgan";
+    import dotenv from "dotenv";
+    import helmet from "helmet";
+    import cors from "cors";
+    import userRoutes from "./routes/userRoutes.js";
+
+    dotenv.config();
+
+    const app = express();
+
+    app.use(express.json());
+    app.use(morgan("dev"));
+    app.use(helmet());
+    app.use(
+      cors({
+        origin: "*", // Adjust for your frontend domain
+        methods: ["GET", "POST", "PUT", "DELETE"],
+      })
+    );
+
+    // Database Connection
+    mongoose
+      .connect(process.env.MONGO_URI, {
+        autoIndex: false, // Better performance in production
+        serverSelectionTimeoutMS: 5000,
+      })
+      .then(() => console.log("Connected to MongoDB Database successfully"))
+      .catch((err) => {
+        console.error("DB Connection Error:", err.message);
+        process.exit(1);
+      });
+
+    // Routes
+    app.use("/api/users", userRoutes);
+
+    app.get("/", (req, res) =>
+      res.json({
+        message: "Node mongo express server is running",
+        success: true,
+        time: new Date().toISOString(),
+      })
+    );
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () =>
+      console.log(`Server running on http://localhost:${PORT}`)
+    );
+    ```
+  </Tab>
+  
+  <Tab title="TypeScript">
+    ```typescript
+    import express, { Express, Request, Response, NextFunction } from "express";
+    import morgan from "morgan";
+    import mongoose from "mongoose";
+    import dotenv from "dotenv";
+    import helmet from "helmet";
+    import userRoutes from "./routes/userRoutes.js";
+    import cors from "cors";
+    
+    dotenv.config();
+
+    const app: Express = express();
+
+    // Middlewares
+    app.use(express.json());
+    app.use(morgan("dev"));
+    app.use(helmet());
+    app.use(
+      cors({
+        origin: "*", // Adjust this in production
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+      })
+    );
+
+    // Database Connection
+    const MONGO_URI: string =
+      process.env.MONGO_URI || "mongodb://localhost:27017/your_database";
+
+    mongoose
+      .connect(MONGO_URI)
+      .then(() => console.log("Connected to MongoDB"))
+      .catch((error: Error) => {
+        console.error("MongoDB connection error:", error.message);
+        process.exit(1);
+      });
+
+    // Routes
+    app.use("/api/users", userRoutes);
+
+    const PORT: number = parseInt(process.env.PORT || "3000", 10);
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+    ```
+  </Tab>
+</Tabs>
+
+### User Model (models/userModel.js)
+
+Mongoose schema with validation and pre-save hooks:
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```javascript
+    import mongoose from "mongoose";
+
+    const userSchema = new mongoose.Schema(
+      {
+        name: {
+          type: String,
+          required: [true, "Name is required"],
+          trim: true,
+          minlength: [2, "Name must be at least 2 characters"],
+          maxlength: [50, "Name cannot exceed 50 characters"],
+        },
+        email: {
+          type: String,
+          required: [true, "Email is required"],
+          unique: true,
+          lowercase: true,
+          trim: true,
+          match: [
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            "Please provide a valid email address",
+          ],
+        },
+      },
+      {
+        timestamps: true,
+        versionKey: false,
+      }
+    );
+
+    userSchema.pre("save", function (next) {
+      this.email = this.email.toLowerCase();
+      next();
+    });
+
+    export default mongoose.model("User", userSchema);
+    ```
+  </Tab>
+  
+  <Tab title="TypeScript">
+    ```typescript
+    import mongoose, { Schema, Document, Model } from "mongoose";
+
+    export interface IUser extends Document {
+      name: string;
+      email: string;
+      createdAt: Date;
+    }
+
+    const userSchema: Schema<IUser> = new Schema(
+      {
+        name: {
+          type: String,
+          required: [true, "Name is required"],
+          trim: true,
+          minlength: [2, "Name must be at least 2 characters long"],
+          maxlength: [50, "Name cannot exceed 50 characters"],
+        },
+        email: {
+          type: String,
+          required: [true, "Email is required"],
+          unique: true,
+          lowercase: true,
+          trim: true,
+          match: [
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            "Please provide a valid email address",
+          ],
+        },
+      },
+      {
+        timestamps: true,
+        versionKey: false,
+      }
+    );
+
+    userSchema.pre("save", function (next) {
+      this.email = this.email.toLowerCase();
+      next();
+    });
+
+    const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
+    export default User;
+    ```
+  </Tab>
+</Tabs>
+
+### User Routes (routes/userRoutes.js)
+
+RESTful API endpoints:
+
+```javascript
+import express from "express";
+import {
+  getUsers,
+  createUser,
+  getUser,
+  deleteUser,
+  updateUser,
+} from "../controllers/userController.js";
+
+const router = express.Router();
+
+router.post("/", createUser);          // Create new user
+router.get("/", getUsers);            // Get all users
+router.get("/:id", getUser);          // Get single user
+router.patch("/:id", updateUser);     // Update user
+router.delete("/:id", deleteUser);    // Delete user
+
+export default router;
+```
+
+### User Controller (controllers/userController.js)
+
+CRUD operations with error handling:
+
+```javascript
+import User from "../models/userModel.js";
+
+export const createUser = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    if (!name || !email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Name and email are required" });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res
+        .status(409)
+        .json({ success: false, message: "Email already in use" });
+    }
+
+    const user = new User({ name, email });
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      data: user,
+    });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
+  }
+};
+
+export const getUsers = async (req, res) => {
+  try {
+    const users = await User.find().sort({ createdAt: -1 });
+    res.status(200).json({ success: true, count: users.length, data: users });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
+  }
+};
+
+// Additional controller methods: getUser, updateUser, deleteUser...
+```
+
+## Dependencies
+
+### Production Dependencies
+
+<CardGroup cols={2}>
+  <Card title="express" icon="server">
+    Fast, minimalist web framework for Node.js
+  </Card>
+  <Card title="mongoose" icon="database">
+    MongoDB ODM for elegant data modeling
+  </Card>
+  <Card title="dotenv" icon="key">
+    Load environment variables from .env file
+  </Card>
+  <Card title="morgan" icon="list">
+    HTTP request logger middleware
+  </Card>
+  <Card title="helmet" icon="shield">
+    Security middleware for Express
+  </Card>
+  <Card title="cors" icon="arrows-turn-to-dots">
+    Enable Cross-Origin Resource Sharing
+  </Card>
+</CardGroup>
+
+### Development Dependencies
+
+<Tabs>
+  <Tab title="JavaScript">
+    - **nodemon** - Auto-restart server on file changes
+  </Tab>
+  
+  <Tab title="TypeScript">
+    - **typescript** - TypeScript compiler
+    - **ts-node** - Execute TypeScript directly
+    - **nodemon** - Auto-restart on changes
+    - **@types/node** - Node.js type definitions
+    - **@types/express** - Express type definitions
+    - **@types/cors** - CORS type definitions
+    - **@types/morgan** - Morgan type definitions
+  </Tab>
+</Tabs>
+
+## NPM Scripts
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```json
+    {
+      "scripts": {
+        "dev": "nodemon app.js"
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="TypeScript">
+    ```json
+    {
+      "scripts": {
+        "dev": "nodemon src/app.ts",
+        "build": "tsc",
+        "start": "node dist/app.js"
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Environment Variables
+
+Create a `.env` file in your project root:
+
+```bash
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/devarkdb
+```
+
+<Note>
+  The template includes a `.env.example` file as a reference. Copy it to `.env` and update with your actual values.
+</Note>
+
+## TypeScript Configuration
+
+The TypeScript variant includes `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true
+  },
+  "include": ["src"]
+}
+```
+
+## Running the Project
+
+<Steps>
+  <Step title="Install MongoDB">
+    Make sure MongoDB is installed and running on your machine:
+    
+    ```bash
+    # macOS
+    brew services start mongodb-community
+    
+    # Linux
+    sudo systemctl start mongod
+    
+    # Or use Docker
+    docker run -d -p 27017:27017 --name mongodb mongo:latest
+    ```
+  </Step>
+
+  <Step title="Configure environment">
+    Copy `.env.example` to `.env` and update the MongoDB connection string:
+    
+    ```bash
+    cp .env.example .env
+    ```
+  </Step>
+
+  <Step title="Start development server">
+    ```bash
+    npm run dev
+    ```
+    
+    The server will start on `http://localhost:5000` (or your configured PORT).
+  </Step>
+
+  <Step title="Test the API">
+    Create a user:
+    ```bash
+    curl -X POST http://localhost:5000/api/users \
+      -H "Content-Type: application/json" \
+      -d '{"name": "John Doe", "email": "john@example.com"}'
+    ```
+    
+    Get all users:
+    ```bash
+    curl http://localhost:5000/api/users
+    ```
+  </Step>
+</Steps>
+
+## API Endpoints
+
+The generated User API includes:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/users` | Create a new user |
+| GET | `/api/users` | Get all users |
+| GET | `/api/users/:id` | Get user by ID |
+| PATCH | `/api/users/:id` | Update user by ID |
+| DELETE | `/api/users/:id` | Delete user by ID |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Add Authentication" icon="lock">
+    Install JWT or Passport.js for user authentication
+  </Card>
+  <Card title="Add More Models" icon="database">
+    Create additional Mongoose models for your domain
+  </Card>
+  <Card title="Add Validation" icon="circle-check">
+    Install express-validator for request validation
+  </Card>
+  <Card title="Add Testing" icon="vial">
+    Set up Jest or Mocha for unit and integration tests
+  </Card>
+</CardGroup>
+
+### Adding More Devark Modules
+
+Enhance your project with additional Devark modules:
+
+```bash
+# Add authentication
+devark module auth
+
+# Add email functionality
+devark module email
+
+# Add file uploads
+devark module upload
+```
+
+### Customization Tips
+
+- **Database**: Update the Mongoose connection options in `app.js` for production
+- **CORS**: Restrict allowed origins in production environment
+- **Error Handling**: Extend the error handler middleware for better error management
+- **Logging**: Consider adding Winston or Pino for advanced logging
+- **Validation**: Add input validation using express-validator or Joi
+
+<Warning>
+  Remember to add `.env` to your `.gitignore` to prevent committing sensitive credentials.
+</Warning>

@@ -1,0 +1,257 @@
+---
+title: Installation
+description: Install Devark CLI and get ready to scaffold backend features
+---
+
+# Installation
+
+Devark is distributed as an npm package and can be installed globally or used directly with `npx`. This guide covers all installation methods and helps you verify your setup.
+
+## System Requirements
+
+Before installing Devark, ensure your system meets these requirements:
+
+- **Node.js** version 18 or higher
+- One of the following package managers:
+  - npm (comes with Node.js)
+  - pnpm
+  - yarn
+  - bun
+
+<Note>
+  Check your Node.js version with `node --version`. If you need to upgrade, visit [nodejs.org](https://nodejs.org/).
+</Note>
+
+## Installation Methods
+
+### Using npx (Recommended)
+
+The easiest way to use Devark is with `npx`, which doesn't require installation:
+
+```bash
+npx devark add google-oauth
+```
+
+This downloads and runs the latest version of Devark automatically. Perfect for occasional use or trying out Devark.
+
+<Tip>
+  Using `npx` ensures you always run the latest version without manual updates.
+</Tip>
+
+### Global Installation
+
+For frequent use, install Devark globally to use it anywhere:
+
+<CodeGroup>
+
+```bash npm
+npm install -g devark
+```
+
+```bash pnpm
+pnpm install -g devark
+```
+
+```bash yarn
+yarn global add devark
+```
+
+```bash bun
+bun add -g devark
+```
+
+</CodeGroup>
+
+After global installation, the `devark` command is available system-wide:
+
+```bash
+devark add google-oauth
+```
+
+### Local Project Installation
+
+You can also install Devark as a dev dependency in your project:
+
+<CodeGroup>
+
+```bash npm
+npm install --save-dev devark
+```
+
+```bash pnpm
+pnpm add -D devark
+```
+
+```bash yarn
+yarn add --dev devark
+```
+
+```bash bun
+bun add -d devark
+```
+
+</CodeGroup>
+
+Then run it via package.json scripts or npx:
+
+```bash
+npx devark add google-oauth
+```
+
+## Verify Installation
+
+Confirm Devark is installed correctly by checking the version:
+
+```bash
+devark --version
+```
+
+You should see output similar to:
+
+```
+1.1.1
+```
+
+To see all available commands:
+
+```bash
+devark --help
+```
+
+Expected output:
+
+```
+Usage: devark [options] [command]
+
+Devark CLI - Modular backend scaffolder
+
+Options:
+  -V, --version      output the version number
+  -h, --help         display help for command
+
+Commands:
+  add <module>       Add a backend module to your project
+  help [command]     display help for command
+```
+
+## Troubleshooting
+
+### Command not found
+
+If you get `devark: command not found` after global installation:
+
+**For npm:**
+```bash
+# Check npm global bin directory
+npm bin -g
+
+# Add it to your PATH if needed
+export PATH="$(npm bin -g):$PATH"
+```
+
+**For pnpm:**
+```bash
+# Ensure pnpm global bin is in PATH
+pnpm setup
+```
+
+**For yarn:**
+```bash
+# Check yarn global bin directory
+yarn global bin
+
+# Add to PATH
+export PATH="$(yarn global bin):$PATH"
+```
+
+<Warning>
+  Add the export command to your shell configuration file (`.bashrc`, `.zshrc`, etc.) to make it permanent.
+</Warning>
+
+### Permission errors (Linux/macOS)
+
+If you encounter permission errors during global installation:
+
+```bash
+# Option 1: Use a Node version manager (recommended)
+nvm install node
+nvm use node
+
+# Option 2: Change npm's default directory
+mkdir ~/.npm-global
+npm config set prefix '~/.npm-global'
+export PATH=~/.npm-global/bin:$PATH
+```
+
+### Windows installation issues
+
+On Windows, you may need to run your terminal as Administrator for global installations.
+
+Alternatively, use a package manager like [Scoop](https://scoop.sh/) or [Chocolatey](https://chocolatey.org/) to manage Node.js and avoid permission issues.
+
+### Module not found errors
+
+If Devark runs but shows "Module not found" errors:
+
+1. Ensure you're in a Node.js project directory with `package.json`
+2. Run `npm install` to ensure all dependencies are installed
+3. Try reinstalling Devark
+
+## Development Setup
+
+If you want to contribute to Devark or test local changes:
+
+```bash
+# Clone the repository
+git clone https://github.com/huzfm/Devark.git
+cd Devark
+
+# Install dependencies
+pnpm install
+
+# Link globally for testing
+pnpm link --global
+```
+
+Now you can run your local development version:
+
+```bash
+devark add google-oauth
+```
+
+<Tip>
+  The Devark repository uses pnpm for dependency management. Make sure you have pnpm installed for development.
+</Tip>
+
+## Updating Devark
+
+To update to the latest version:
+
+<CodeGroup>
+
+```bash npm
+npm update -g devark
+```
+
+```bash pnpm
+pnpm update -g devark
+```
+
+```bash yarn
+yarn global upgrade devark
+```
+
+```bash npx
+# npx always uses the latest version
+npx devark@latest add <module>
+```
+
+</CodeGroup>
+
+## Next Steps
+
+Now that Devark is installed, you're ready to start adding features to your project:
+
+<Card title="Quickstart Tutorial" icon="rocket" href="/quickstart">
+  Follow a step-by-step guide to add Google OAuth to your project
+</Card>
