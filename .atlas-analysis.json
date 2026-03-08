@@ -1,0 +1,87 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Devark",
+  "projectDescription": "Backend scaffolding CLI that adds production-ready features like OAuth, OTP, and database templates to Node.js projects",
+  "theme": "aspen",
+  "primaryColor": "#cb0404",
+  "lightColor": "#f3d2d2",
+  "darkColor": "#e37b84",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Authentication Modules",
+            "pages": [
+              "modules/google-oauth",
+              "modules/github-oauth",
+              "modules/resend-otp"
+            ]
+          },
+          {
+            "group": "Project Templates",
+            "pages": [
+              "templates/node-mongodb",
+              "templates/node-postgresql"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/javascript-vs-typescript",
+              "guides/environment-variables",
+              "guides/package-managers"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/add",
+              "cli/version"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/module-structure",
+              "advanced/contributing",
+              "advanced/troubleshooting"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Modular backend scaffolding with production-ready templates",
+    "Google and GitHub OAuth integration",
+    "Email OTP authentication via Resend",
+    "Full-stack project templates (Node + MongoDB/PostgreSQL)",
+    "JavaScript and TypeScript support",
+    "Automatic package manager detection",
+    "Intelligent file patching and dependency management"
+  ],
+  "publicApiSurface": [
+    "devark add google-oauth",
+    "devark add github-oauth",
+    "devark add resend-otp",
+    "devark add node-mongo",
+    "devark add node-postgres",
+    "devark add oauth",
+    "devark --version"
+  ]
+}
